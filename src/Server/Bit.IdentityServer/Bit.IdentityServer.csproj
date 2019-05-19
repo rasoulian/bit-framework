@@ -15,9 +15,9 @@
     <RepositoryUrl>https://github.com/bit-foundation/bit-framework</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReleaseNotes>https://github.com/bit-foundation/bit-framework/releases</PackageReleaseNotes>
-    <AssemblyVersion>0.0.0.1</AssemblyVersion>
-    <FileVersion>0.0.0.1</FileVersion>
-    <Version>0.0.1</Version>
+    <Version>$(Bit-Package-Version)</Version>
+    <AssemblyVersion>$(Bit-Assembly-Version)</AssemblyVersion>
+    <PackageVersion>$(Bit-Package-Version)</PackageVersion>
     <GeneratePackageOnBuild Condition=" '$(Configuration)' == 'Release' ">true</GeneratePackageOnBuild>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <LangVersion>7.3</LangVersion>
@@ -26,15 +26,21 @@
 
   <ItemGroup>
     <PackageReference Include="AntiXSS" Version="4.3.0" />
-    <PackageReference Include="IdentityServer3" Version="2.6.3" />
+    <PackageReference Include="IdentityServer3" Version="2.6.3" Condition="'$(TargetFramework)' == 'net461'" />
+    <PackageReference Include="Bit.IdSrv3" Version="0.0.3" Condition="'$(TargetFramework)' == 'netcoreapp2.0'" />
     <PackageReference Include="Microsoft.Owin.Security.Facebook" Version="4.0.1" />
     <PackageReference Include="Microsoft.Owin.Security.Google" Version="4.0.1" />
     <PackageReference Include="Microsoft.Owin.Security.MicrosoftAccount" Version="4.0.1" />
     <PackageReference Include="Microsoft.Owin.Security.Twitter" Version="4.0.1" />
-    <PackageReference Include="Owin.Security.Providers.LinkedIn" Version="2.25.0" />
+    <PackageReference Include="Owin.Security.Providers.LinkedIn" Version="2.26.0" />
     <PackageReference Include="SourceLink.Embed.AllSourceFiles" Version="2.8.3" PrivateAssets="all" />
     <PackageReference Include="SourceLink.Copy.PdbFiles" Version="2.8.3" PrivateAssets="All" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="4.5.0" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Tracing" Version="5.2.7" />
+    <PackageReference Include="Microsoft.Owin.Cors" Version="4.0.1" />
+    <PackageReference Include="Microsoft.Owin.Security.Cookies" Version="4.0.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
+
   </ItemGroup>
 
   <ItemGroup>

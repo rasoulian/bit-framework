@@ -12,6 +12,7 @@ using OpenQA.Selenium.Remote;
 using Refit;
 using Simple.OData.Client;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -46,7 +47,8 @@ namespace Bit.Test.Server
                 {
                     afterResponse?.Invoke(message);
                 },
-                OnCreateMessageHandler = GetHttpMessageHandler
+                OnCreateMessageHandler = GetHttpMessageHandler,
+                NameMatchResolver = ODataNameMatchResolver.AlpahumericCaseInsensitive
             });
 
             return client;
@@ -98,6 +100,8 @@ namespace Bit.Test.Server
 
             };
 
+            //chromeOptions.AddArguments("--lang=fa");
+
             ChromeDriver driver = new ChromeDriver(chromeOptions);
 
             //InternetExplorerDriver driver = new InternetExplorerDriver();
@@ -138,7 +142,7 @@ namespace Bit.Test.Server
             Uri = uri;
         }
 
-        public virtual Task<TokenResponse> Login(string userName, string password, string clientId, string secret = "secret")
+        public virtual Task<TokenResponse> Login(string userName, string password, string clientId, string secret = "secret", IDictionary<string,string> parameters = null)
         {
             HttpClient client = BuildHttpClient();
 
@@ -149,7 +153,8 @@ namespace Bit.Test.Server
                 ClientId = clientId,
                 Scope = "openid profile user_info",
                 UserName = userName,
-                Password = password
+                Password = password,
+                Parameters = parameters ?? new Dictionary<string, string> { }
             });
         }
 
@@ -171,7 +176,7 @@ namespace Bit.Test.Server
         {
             return RestService.For<TService>(BuildHttpClient(token), new RefitSettings
             {
-                JsonSerializerSettings = DefaultJsonContentFormatter.SerializeSettings()
+                ContentSerializer = new JsonContentSerializer(DefaultJsonContentFormatter.SerializeSettings())
             });
         }
     }

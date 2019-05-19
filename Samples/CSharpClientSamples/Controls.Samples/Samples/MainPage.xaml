@@ -3,7 +3,7 @@
     x:Class="Bit.CSharpClient.Controls.Samples.MainPage"
     xmlns="http://xamarin.com/schemas/2014/forms"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:bitControls="clr-namespace:Bit.CSharpClient.Controls;assembly=Bit.CSharpClient.Controls">
+    xmlns:bitControls="clr-namespace:Bit.View.Controls;assembly=Bit.CSharpClient.Controls">
     <bitControls:BitFrame
         Margin="10"
         BorderColor="LightGray"
@@ -12,7 +12,7 @@
         <StackLayout HorizontalOptions="Center" VerticalOptions="Center">
             <Button Clicked="RadioButton_Clicked" Text="Radio Button" />
             <Button Clicked="Checkbox_Clicked" Text="Checkbox" />
-            <Button Clicked="DatePicker_Clicked" Text="Date Picker" />
+            <Button Clicked="DateTimePicker_Clicked" Text="Date Time Picker" />
         </StackLayout>
     </bitControls:BitFrame>
 </ContentPage>

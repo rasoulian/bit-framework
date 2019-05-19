@@ -1,5 +1,5 @@
 ﻿using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Test.Server;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Model.Dto;
@@ -36,7 +36,7 @@ namespace Bit.Tests.HtmlClient.ViewModel.Implementation
                     .Last();
 
                 A.CallTo(() => countriesController.GetAllCountries(A<ODataQueryOptions<CountryDto>>.That.Matches(query => query.Filter.RawValue == "((SomeProperty eq 1) or (SomeProperty eq 3))")))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
     }

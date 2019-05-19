@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Bit.Tests.Api.ApiControllers
 {
@@ -33,42 +34,36 @@ namespace Bit.Tests.Api.ApiControllers
         }
 
         [Get]
-        public virtual async Task<TestComplexDto> Get(int key, CancellationToken cancellationToken)
+        public virtual async Task<SingleResult<TestComplexDto>> Get(int key, CancellationToken cancellationToken)
         {
-            return Get()
-                .Single(t => t.EntityId == key);
+            return SingleResult(Get()
+                .Where(t => t.EntityId == key));
         }
 
         [Create]
-        public virtual async Task<TestComplexDto> Create(TestComplexDto model, CancellationToken cancellationToken)
+        public virtual async Task<SingleResult<TestComplexDto>> Create(TestComplexDto model, CancellationToken cancellationToken)
         {
             model.ComplexObj.Name += "?";
-            return model;
+            return SingleResult(model);
         }
 
         [PartialUpdate]
-        public virtual async Task<TestComplexDto> PartialUpdate(int key, Delta<TestComplexDto> modelDelta,
+        public virtual async Task<SingleResult<TestComplexDto>> PartialUpdate(int key, Delta<TestComplexDto> modelDelta,
             CancellationToken cancellationToken)
         {
             TestComplexDto model = modelDelta.GetInstance();
 
             model.ComplexObj.Name += "?";
 
-            return model;
-        }
-        public class DoSomeThingWithComplexObjParameters
-        {
-            public TestComplexDto complexDto { get; set; }
+            return SingleResult(model);
         }
 
         [Action]
-        public virtual TestComplexDto DoSomeThingWithComplexObj(DoSomeThingWithComplexObjParameters parameters)
+        public virtual SingleResult<TestComplexDto> DoSomeThingWithComplexObj(TestComplexDto complexDto)
         {
-            TestComplexDto complexDto = parameters.complexDto;
-
             complexDto.ComplexObj.Name += "?";
 
-            return complexDto;
+            return SingleResult(complexDto);
         }
 
         [Function]
@@ -77,16 +72,18 @@ namespace Bit.Tests.Api.ApiControllers
             return new[] { new ComplexObj2 { Name = "Test" } };
         }
 
-        public class GetValuesParameters
+        [Function]
+        public virtual TestComplexDto[] GetObjectsWithNullCompexTypes()
         {
-            public IEnumerable<int> values { get; set; }
+            return new[]
+            {
+                new TestComplexDto { EntityId = 1, ComplexObj = null }
+            };
         }
 
         [Action]
-        public virtual async Task<int[]> GetValues(GetValuesParameters parameters, CancellationToken cancellationToken)
+        public virtual async Task<int[]> GetValues(IEnumerable<int> values, CancellationToken cancellationToken)
         {
-            IEnumerable<int> values = parameters.values;
-
             return values.Reverse().ToArray();
         }
     }

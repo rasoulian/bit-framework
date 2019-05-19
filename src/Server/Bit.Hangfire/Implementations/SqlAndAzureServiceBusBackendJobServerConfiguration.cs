@@ -43,13 +43,14 @@ namespace Bit.Hangfire.Implementations
             SqlServerStorage storage = new SqlServerStorage(jobSchedulerDbConnectionString, new SqlServerStorageOptions
             {
                 PrepareSchemaIfNecessary = false,
-#if DotNet
-                TransactionIsolationLevel = IsolationLevel.ReadCommitted,
-#else
-                TransactionIsolationLevel = System.Data.IsolationLevel.ReadCommitted,
-#endif
-                SchemaName = "Jobs"
-            });
+                UseRecommendedIsolationLevel = true,
+                SchemaName = "HangFire",
+                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                QueuePollInterval = TimeSpan.Zero,
+                UsePageLocksOnDequeue = true,
+                DisableGlobalLocks = true
+            }); // https://docs.hangfire.io/en/latest/configuration/using-sql-server.html#configuration
 
             if (AppEnvironment.HasConfig("JobSchedulerAzureServiceBusConnectionString"))
             {
@@ -58,6 +59,7 @@ namespace Bit.Hangfire.Implementations
                 storage.UseServiceBusQueues(signalRAzureServiceBusConnectionString);
             }
 
+            JobStorage.Current = storage;
             GlobalConfiguration.Configuration.UseStorage(storage);
             GlobalConfiguration.Configuration.UseAutofacActivator(_lifetimeScope);
             GlobalConfiguration.Configuration.UseLogProvider(LogProvider);

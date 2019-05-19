@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Bit.Core.Contracts;
 using Bit.Core.Models;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Model.DomainModels;
 using FakeItEasy;
@@ -27,8 +27,8 @@ namespace Bit.Tests.Api.Middlewares.SignalR.Tests
 
                 try
                 {
-                    await client.Controller<TestModelsController, TestModel>()
-                        .Action(nameof(TestModelsController.PushSomethingWithDateTimeOffset))
+                    await client.TestModels()
+                        .PushSomethingWithDateTimeOffset()
                         .ExecuteAsync();
 
                     Assert.Fail();
@@ -41,7 +41,7 @@ namespace Bit.Tests.Api.Middlewares.SignalR.Tests
                     A.CallTo(() => logStore.SaveLogAsync(A<LogEntry>.That.Matches(log =>
                                       log.LogData.Any(logData => logData.Key == "WebException" &&
                                               ((string)logData.Value).Contains("You may not use date time values in signalr content formatter")))))
-                                              .MustHaveHappened(Repeated.Exactly.Once);
+                                              .MustHaveHappenedOnceExactly();
                 }
             }
         }

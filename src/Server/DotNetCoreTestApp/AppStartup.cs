@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core;
 using Bit.Core.Contracts;
-using Bit.Data.EntityFrameworkCore.Contracts;
+using Bit.Data.Contracts;
 using Bit.Data.EntityFrameworkCore.Implementations;
 using Bit.IdentityServer.Contracts;
 using Bit.IdentityServer.Implementations;
@@ -13,7 +13,6 @@ using Bit.OData.ODataControllers;
 using Bit.Owin.Exceptions;
 using Bit.Owin.Implementations;
 using Bit.OwinCore;
-using Bit.OwinCore.Contracts;
 using IdentityServer3.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,13 +105,14 @@ namespace DotNetCoreTestApp
             dependencyManager.RegisterSignalRMiddlewareUsingDefaultConfiguration();
 
             dependencyManager.RegisterRepository(typeof(TestEfRepository<>).GetTypeInfo());
+            dependencyManager.RegisterRepository(typeof(CustomersRepository).GetTypeInfo());
 
-            dependencyManager.RegisterEfCoreDbContext<TestDbContext, InMemoryDbContextObjectsProvider>();
+            dependencyManager.RegisterEfCoreDbContext<TestDbContext>((sp, optionsBuilder) => optionsBuilder.UseInMemoryDatabase("TestDb"));
 
             dependencyManager.RegisterDtoEntityMapper();
 
-            dependencyManager.RegisterDtoEntityMapperConfiguration<DefaultDtoEntityMapperConfiguration>();
-            dependencyManager.RegisterDtoEntityMapperConfiguration<TestDtoEntityMapperConfiguration>();
+            dependencyManager.RegisterMapperConfiguration<DefaultMapperConfiguration>();
+            dependencyManager.RegisterMapperConfiguration<TestMapperConfiguration>();
 
             dependencyManager.RegisterSingleSignOnServer<TestUserService, TestOAuthClientsProvider>();
         }
@@ -120,17 +120,12 @@ namespace DotNetCoreTestApp
 
     public class TestUserService : UserService
     {
-        public override Task<string> GetUserIdByLocalAuthenticationContextAsync(LocalAuthenticationContext context, CancellationToken cancellationToken)
+        public override Task<BitJwtToken> LocalLogin(LocalAuthenticationContext context, CancellationToken cancellationToken)
         {
             if (context.UserName == context.Password)
-                return Task.FromResult(context.UserName);
+                return Task.FromResult(new BitJwtToken { UserId = context.UserName });
 
             throw new DomainLogicException("LoginFailed");
-        }
-
-        public override Task<bool> UserIsActiveAsync(IsActiveContext context, string userId, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(true);
         }
     }
 
@@ -152,18 +147,11 @@ namespace DotNetCoreTestApp
         }
     }
 
-    public class TestDbContext : EfCoreDbContextBase
+    public class TestDbContext : DbContext
     {
-        public TestDbContext()
-            : base(new DbContextOptionsBuilder<TestDbContext>().UseInMemoryDatabase("test").Options)
+        public TestDbContext(DbContextOptions<TestDbContext> options)
+            : base(options)
         {
-
-        }
-
-        public TestDbContext(IDbContextObjectsProvider dbContextCreationOptionsProvider)
-              : base("test", dbContextCreationOptionsProvider)
-        {
-
         }
 
         public virtual DbSet<Customer> Customers { get; set; }
@@ -185,7 +173,7 @@ namespace DotNetCoreTestApp
         public virtual string FullName { get; set; }
     }
 
-    public class TestDtoEntityMapperConfiguration : IDtoEntityMapperConfiguration
+    public class TestMapperConfiguration : IMapperConfiguration
     {
         public virtual void Configure(IMapperConfigurationExpression mapperConfigExpression)
         {
@@ -194,8 +182,24 @@ namespace DotNetCoreTestApp
         }
     }
 
-    public class TestEfRepository<TEntity> : EfCoreRepository<TEntity>
+    public class TestEfRepository<TEntity> : EfCoreRepository<TestDbContext, TEntity>, ITestRepository<TEntity>
         where TEntity : class, IEntity
+    {
+
+    }
+
+    public interface ITestRepository<TEntity> : IRepository<TEntity>
+        where TEntity : class, IEntity
+    {
+
+    }
+
+    public interface ICustomersRepository : ITestRepository<Customer>
+    {
+
+    }
+
+    public class CustomersRepository : TestEfRepository<Customer>, ICustomersRepository
     {
 
     }
@@ -210,9 +214,18 @@ namespace DotNetCoreTestApp
 
     public class CustomersController : DtoSetController<CustomerDto, Customer, int>
     {
+        public virtual IRepository<Customer> CustomersRepository { get; set; }
+
+        public virtual ITestRepository<Customer> CustomersRepository2 { get; set; }
+
+        public virtual ICustomersRepository CustomersRepository3 { get; set; }
+
         [Function]
         public int Sum(int firstNumber, int secondNumber)
         {
+            if (CustomersRepository != CustomersRepository2 || CustomersRepository != CustomersRepository3)
+                throw new InvalidOperationException();
+
             return firstNumber + secondNumber;
         }
     }

@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Test.Server;
 using Bit.Tests.IdentityServer.Implementations;
 using FakeItEasy;
@@ -42,7 +42,7 @@ namespace Bit.Tests.IdentityServer
                     try
                     {
                         A.CallTo(() => userService.AuthenticateLocalAsync(A<LocalAuthenticationContext>.That.Matches(cntx => cntx.UserName == "ValidUserName" && cntx.Password == "ValidPassword"), A<CancellationToken>.Ignored))
-                            .MustHaveHappened(Repeated.Exactly.Once);
+                            .MustHaveHappenedOnceExactly();
 
                         foundAnyCorrectCall = true;
                     }
@@ -81,7 +81,7 @@ namespace Bit.Tests.IdentityServer
                     try
                     {
                         A.CallTo(() => userService.AuthenticateLocalAsync(A<LocalAuthenticationContext>.That.Matches(cntx => cntx.UserName == "InValidUserName" && cntx.Password == "InValidPassword"), A<CancellationToken>.Ignored))
-                            .MustHaveHappened(Repeated.Exactly.Once);
+                            .MustHaveHappenedOnceExactly();
 
                         foundAnyCorrectCall = true;
                     }

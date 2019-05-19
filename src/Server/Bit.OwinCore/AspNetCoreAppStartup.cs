@@ -7,6 +7,7 @@ using Bit.OwinCore.Implementations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Owin;
@@ -19,7 +20,8 @@ namespace Bit.OwinCore
 {
     public class AspNetCoreAppStartup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        public IHostingEnvironment HostingEnvironment { get; }
+
         private readonly IPathProvider _pathProvider;
 
         public AspNetCoreAppStartup(IServiceProvider serviceProvider)
@@ -27,8 +29,9 @@ namespace Bit.OwinCore
             if (serviceProvider == null)
                 throw new ArgumentNullException(nameof(serviceProvider));
 
-            _hostingEnvironment = serviceProvider.GetService<IHostingEnvironment>();
-            DefaultPathProvider.Current = _pathProvider = new AspNetCorePathProvider(_hostingEnvironment);
+            HostingEnvironment = serviceProvider.GetRequiredService<IHostingEnvironment>();
+
+            DefaultPathProvider.Current = _pathProvider = new AspNetCorePathProvider(HostingEnvironment);
         }
 
         public virtual void InitServices(IServiceCollection services)
@@ -76,11 +79,11 @@ namespace Bit.OwinCore
 
         public void Configure(IApplicationBuilder aspNetCoreApp, OwinAppStartup owinAppStartup, IEnumerable<IAspNetCoreMiddlewareConfiguration> aspNetCoreMiddlewares)
         {
-            if (string.IsNullOrEmpty(_hostingEnvironment.WebRootPath))
-                _hostingEnvironment.WebRootPath = _pathProvider.GetStaticFilesFolderPath();
+            if (string.IsNullOrEmpty(HostingEnvironment.WebRootPath))
+                HostingEnvironment.WebRootPath = _pathProvider.GetStaticFilesFolderPath();
 
-            if (Directory.Exists(_hostingEnvironment.WebRootPath) && (_hostingEnvironment.WebRootFileProvider == null || _hostingEnvironment.WebRootFileProvider is NullFileProvider))
-                _hostingEnvironment.WebRootFileProvider = new PhysicalFileProvider(_hostingEnvironment.WebRootPath);
+            if (Directory.Exists(HostingEnvironment.WebRootPath) && (HostingEnvironment.WebRootFileProvider == null || HostingEnvironment.WebRootFileProvider is NullFileProvider))
+                HostingEnvironment.WebRootFileProvider = new PhysicalFileProvider(HostingEnvironment.WebRootPath);
 
             ConfigureBitAspNetCoreApp(aspNetCoreApp, owinAppStartup, aspNetCoreMiddlewares);
         }
@@ -88,10 +91,16 @@ namespace Bit.OwinCore
         public virtual void ConfigureBitAspNetCoreApp(IApplicationBuilder aspNetCoreApp, OwinAppStartup owinAppStartup, IEnumerable<IAspNetCoreMiddlewareConfiguration> aspNetCoreMiddlewares)
         {
             aspNetCoreMiddlewares
+                .Where(m => m.MiddlewarePosition == MiddlewarePosition.BeforeOwinMiddlewares)
                 .ToList()
                 .ForEach(aspNetCoreMiddleware => aspNetCoreMiddleware.Configure(aspNetCoreApp));
 
             aspNetCoreApp.UseOwinApp(owinAppStartup.Configuration);
+
+            aspNetCoreMiddlewares
+                .Where(m => m.MiddlewarePosition == MiddlewarePosition.AfterOwinMiddlewares)
+                .ToList()
+                .ForEach(aspNetCoreMiddleware => aspNetCoreMiddleware.Configure(aspNetCoreApp));
         }
     }
 }

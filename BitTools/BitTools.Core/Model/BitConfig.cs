@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using System;
+using System.IO;
 
 namespace BitTools.Core.Model
 {
@@ -10,6 +12,11 @@ namespace BitTools.Core.Model
     public class BitCodeGeneratorConfig
     {
         public virtual BitCodeGeneratorMapping[] BitCodeGeneratorMappings { get; set; }
+    }
+
+    public enum GenerationType
+    {
+        CSharp, TypeScript
     }
 
     public class BitCodeGeneratorMapping
@@ -28,11 +35,18 @@ namespace BitTools.Core.Model
         public virtual string DestinationFileName { get; set; }
 
         public virtual string TypingsPath { get; set; }
+
+        public virtual GenerationType GenerationType => string.IsNullOrEmpty(TypingsPath) ? GenerationType.CSharp : GenerationType.TypeScript;
     }
 
     public class ProjectInfo
     {
         public virtual string Name { get; set; }
+
+        public bool IsThisProject(Project p)
+        {
+            return p.Name == Name || Path.GetFileNameWithoutExtension(p.FilePath) == Name;
+        }
     }
 
     public class NamespaceAlias

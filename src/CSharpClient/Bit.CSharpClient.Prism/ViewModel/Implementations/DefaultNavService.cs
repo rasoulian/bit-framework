@@ -1,9 +1,11 @@
-﻿using Bit.ViewModel.Contracts;
+﻿using Bit.View;
+using Bit.ViewModel.Contracts;
 using Prism.Navigation;
-using Rg.Plugins.Popup.Services;
+using Rg.Plugins.Popup.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -37,6 +39,8 @@ namespace Bit.ViewModel.Implementations
 
         public virtual async Task GoBackAsync(INavigationParameters parameters = null)
         {
+            bool ignoreMeInNavStack = PopupNavigation.PopupStack.LastOrDefault()?.GetType().GetCustomAttribute<IgnoreMeInNavigationStackAttribute>() != null;
+
             INavigationResult navigationResult = await PrismNavigationService.GoBackAsync(parameters, useModalNavigation: false, animated: false);
 
             if (!navigationResult.Success && navigationResult.Exception is ArgumentOutOfRangeException && AppNavService != null)
@@ -50,6 +54,11 @@ namespace Bit.ViewModel.Implementations
 
             if (!navigationResult.Success)
                 throw navigationResult.Exception;
+
+            if (ignoreMeInNavStack == true)
+            {
+                await GoBackAsync(parameters);
+            }
         }
 
         public virtual async Task GoBackAsync(params (string, object)[] parameters)
@@ -97,7 +106,7 @@ namespace Bit.ViewModel.Implementations
             if (!navigationResult.Success)
                 throw navigationResult.Exception;
 
-            await PopupNavigation.Instance.PopAllAsync(animate: false); // all popups which are not managed by prism's nav service.
+            await PopupNavigation.PopAllAsync(animate: false); // all popups which are not managed by prism's nav service.
         }
 
         public virtual async Task GoBackToAsync(string name, params (string, object)[] parameters)
@@ -107,7 +116,7 @@ namespace Bit.ViewModel.Implementations
 
         public virtual async Task GoBackToAsync(string name, INavigationParameters parameters = null)
         {
-            await ClearPopupStackAsync(parameters);
+            await ClearPopupStackAsync(parameters); // TODO
 
             string navigationStack = GetNavigationUriPath();
             List<string> pagesInStack = navigationStack.Split('/').ToList();
@@ -130,6 +139,8 @@ namespace Bit.ViewModel.Implementations
         }
 
         public virtual INavigationService PrismNavigationService { get; set; }
+
+        public virtual IPopupNavigation PopupNavigation { get; set; }
 
         public virtual INavService AppNavService
         {

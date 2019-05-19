@@ -1,4 +1,6 @@
-﻿using Refit;
+﻿using Bit.Core.Contracts;
+using Bit.Tests.Model.Dto;
+using Refit;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -34,6 +36,22 @@ namespace Bit.Tests.Api.ApiControllers
         public virtual HttpResponseMessage Test([FromUri]Filter filter)
         {
             return Request.CreateResponse(HttpStatusCode.OK);
+        }
+
+        [HttpPost]
+        [Route("some-action")]
+        public virtual TestCustomerDto SomeAction(TestCustomerDto customer)
+        {
+            return customer;
+        }
+
+       public virtual IUserInformationProvider UserInformationProvider { get; set; }
+
+        [HttpGet]
+        [Route("get-custom-data")]
+        public virtual string GetCustomData()
+        {
+            return UserInformationProvider.GetBitJwtToken().CustomProps["custom-data"];
         }
     }
 

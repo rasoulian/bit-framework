@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,22 +13,19 @@ namespace Bit.Data
     public class DefaultDbConnectionProvider<TDbConnection> : IDbConnectionProvider
         where TDbConnection : DbConnection, new()
     {
-        private readonly IDictionary<string, DbConnectionAndTransactionPair> _connections =
-            new Dictionary<string, DbConnectionAndTransactionPair>();
+        private readonly ICollection<DbConnectionAndTransactionPair> _dbConnectionAndTransactions =
+            new List<DbConnectionAndTransactionPair>();
 
         public virtual IScopeStatusManager ScopeStatusManager { get; set; }
 
-        public virtual DbTransaction GetDbTransaction(string connectionString)
+        public virtual IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+
+        public virtual DbTransaction GetDbTransaction(DbConnection dbConnection)
         {
-            if (connectionString == null)
-                throw new ArgumentNullException(nameof(connectionString));
+            if (dbConnection == null)
+                throw new ArgumentNullException(nameof(dbConnection));
 
-            if (!_connections.ContainsKey(connectionString))
-            {
-                throw new InvalidOperationException($"No connection was created, either call {nameof(GetDbConnection)} or {nameof(GetDbConnectionAsync)}");
-            }
-
-            return _connections[connectionString].Transaction;
+            return _dbConnectionAndTransactions.ExtendedSingle($"Getting db transaction for db connection", dbAndTran => dbAndTran.Connection == dbConnection).Transaction;
         }
 
         public virtual DbConnection GetDbConnection(string connectionString, bool rollbackOnScopeStatusFailure)
@@ -35,15 +33,20 @@ namespace Bit.Data
             if (connectionString == null)
                 throw new ArgumentNullException(nameof(connectionString));
 
-            if (!_connections.ContainsKey(connectionString))
+            if (!_dbConnectionAndTransactions.Any(dbAndTran => dbAndTran.ConnectionString != connectionString))
             {
                 TDbConnection newConnection = new TDbConnection { ConnectionString = connectionString };
-                newConnection.Open();
-                DbTransaction transaction = newConnection.BeginTransaction(IsolationLevel.ReadCommitted);
-                _connections.Add(connectionString, new DbConnectionAndTransactionPair(newConnection, transaction, rollbackOnScopeStatusFailure));
+                DbTransaction transaction = null;
+                try
+                {
+                    newConnection.Open();
+                    transaction = newConnection.BeginTransaction(IsolationLevel);
+                }
+                catch { }
+                _dbConnectionAndTransactions.Add(new DbConnectionAndTransactionPair(connectionString, newConnection, transaction, rollbackOnScopeStatusFailure));
             }
 
-            return _connections[connectionString].Connection;
+            return _dbConnectionAndTransactions.ExtendedSingle($"Getting db connection for {connectionString}", dbAndTran => dbAndTran.ConnectionString == connectionString).Connection;
         }
 
         public virtual async Task<DbConnection> GetDbConnectionAsync(string connectionString, bool rollbackOnScopeStatusFailure,
@@ -52,15 +55,20 @@ namespace Bit.Data
             if (connectionString == null)
                 throw new ArgumentNullException(nameof(connectionString));
 
-            if (!_connections.ContainsKey(connectionString))
+            if (!_dbConnectionAndTransactions.Any(dbAndTran => dbAndTran.ConnectionString != connectionString))
             {
-                TDbConnection newDbConnection = new TDbConnection { ConnectionString = connectionString };
-                await newDbConnection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                DbTransaction transaction = newDbConnection.BeginTransaction(IsolationLevel.ReadCommitted);
-                _connections.Add(connectionString, new DbConnectionAndTransactionPair(newDbConnection, transaction, rollbackOnScopeStatusFailure));
+                TDbConnection newConnection = new TDbConnection { ConnectionString = connectionString };
+                DbTransaction transaction = null;
+                try
+                {
+                    await newConnection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                    transaction = newConnection.BeginTransaction(IsolationLevel);
+                }
+                catch { }
+                _dbConnectionAndTransactions.Add(new DbConnectionAndTransactionPair(connectionString, newConnection, transaction, rollbackOnScopeStatusFailure));
             }
 
-            return _connections[connectionString].Connection;
+            return _dbConnectionAndTransactions.ExtendedSingle($"Getting db connection for {connectionString}", dbAndTran => dbAndTran.ConnectionString == connectionString).Connection;
         }
 
         public virtual void Dispose()
@@ -73,39 +81,43 @@ namespace Bit.Data
         {
             bool wasSucceeded = ScopeStatusManager.WasSucceeded();
 
-            foreach (DbConnectionAndTransactionPair connectionAndTransaction in _connections.Values)
+            foreach (DbConnectionAndTransactionPair dbAndTran in _dbConnectionAndTransactions)
             {
                 try
                 {
-                    if (connectionAndTransaction.RollbackOnScopeStatusFailure == false)
-                        connectionAndTransaction.Transaction.Commit();
+                    if (dbAndTran.RollbackOnScopeStatusFailure == false)
+                        dbAndTran.Transaction?.Commit();
                     else
                     {
                         if (wasSucceeded)
-                            connectionAndTransaction.Transaction.Commit();
+                            dbAndTran.Transaction?.Commit();
                         else
-                            connectionAndTransaction.Transaction.Rollback();
+                            dbAndTran.Transaction?.Rollback();
                     }
                 }
                 finally
                 {
-                    connectionAndTransaction.Connection.Dispose();
+                    dbAndTran.Transaction?.Dispose();
+                    dbAndTran.Connection.Dispose();
                 }
             }
         }
 
-        private class DbConnectionAndTransactionPair
+        public class DbConnectionAndTransactionPair
         {
-            public DbConnectionAndTransactionPair(TDbConnection connection, DbTransaction transaction, bool rollbackOnScopeStatusFailure)
+            public DbConnectionAndTransactionPair(string connectionString, TDbConnection connection, DbTransaction transaction, bool rollbackOnScopeStatusFailure)
             {
                 Connection = connection;
                 Transaction = transaction;
                 RollbackOnScopeStatusFailure = rollbackOnScopeStatusFailure;
+                ConnectionString = connectionString;
             }
 
             public TDbConnection Connection { get; }
 
             public DbTransaction Transaction { get; }
+
+            public virtual string ConnectionString { get; }
 
             public bool RollbackOnScopeStatusFailure { get; }
         }

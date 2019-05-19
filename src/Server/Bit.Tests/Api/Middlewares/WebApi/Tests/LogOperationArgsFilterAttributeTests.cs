@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Contracts;
 using Bit.Core.Models;
 using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Core.Contracts;
 using Bit.Tests.Model.DomainModels;
@@ -42,9 +42,8 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 try
                 {
-                    await client.Controller<TestModelsController, TestModel>()
-                        .Action(nameof(TestModelsController.SendEmail))
-                        .Set(new TestModelsController.EmailParameters { to = "Someone", title = "Email title", message = "Email message" })
+                    await client.TestModels()
+                        .SendEmail(to: "Someone", title: "Email title", message: "Email message")
                         .ExecuteAsync();
 
                     Assert.Fail();
@@ -55,7 +54,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                         .OfType<ILogStore>().Last();
 
                     A.CallTo(() => logStore.SaveLogAsync(A<LogEntry>.That.Matches(log => ((TestModelsController.EmailParameters)((KeyValuePair<string,object>[])log.LogData.Single(ld => ld.Key == "OperationArgs").Value)[0].Value).to == "Someone")))
-                        .MustHaveHappened(Repeated.Exactly.Once);
+                        .MustHaveHappenedOnceExactly();
                 }
             }
         }

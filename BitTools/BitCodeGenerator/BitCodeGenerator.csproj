@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
-    <AssemblyVersion>0.0.0.1</AssemblyVersion>
-    <FileVersion>0.0.0.1</FileVersion>
-    <Version>0.0.1</Version>
+    <Version>$(Bit-Package-Version)</Version>
+    <AssemblyVersion>$(Bit-Assembly-Version)</AssemblyVersion>
+    <PackageVersion>$(Bit-Package-Version)</PackageVersion>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
@@ -40,6 +40,16 @@
       <DependentUpon>TypeScriptContextGeneratorTemplate.tt</DependentUpon>
     </Compile>
 
+	<None Update="Implementations\CSharpClientProxyGenerator\Templates\CSharpContextGeneratorTemplate.tt">
+      <Generator>TextTemplatingFilePreprocessor</Generator>
+      <LastGenOutput>CSharpContextGeneratorTemplate.cs</LastGenOutput>
+    </None>
+    <Compile Update="Implementations\CSharpClientProxyGenerator\Templates\CSharpContextGeneratorTemplate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>CSharpContextGeneratorTemplate.tt</DependentUpon>
+    </Compile>
+
     <None Update="Implementations\TypeScriptClientProxyGenerator\Templates\TypeScriptDtosGeneratorTemplate.tt">
       <Generator>TextTemplatingFilePreprocessor</Generator>
       <LastGenOutput>TypeScriptDtosGeneratorTemplate.cs</LastGenOutput>
@@ -56,17 +66,14 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>5.0.8</Version>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common">
-      <Version>1.2.2</Version>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\BitTools.Core.VSExtensionBuildVersion\BitTools.Core.VSExtensionBuildVersion.csproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="1.2.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="1.2.2" />
   </ItemGroup>
 
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
+
+  <Import Project="..\BitTools.Core\BitTools.Core.projitems" Label="Shared" />
 
 </Project>

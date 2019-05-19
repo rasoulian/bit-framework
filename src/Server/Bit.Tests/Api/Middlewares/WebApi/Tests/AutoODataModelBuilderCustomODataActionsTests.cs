@@ -44,9 +44,9 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                await client.Controller<TestModelsController, TestModel>()
-                    .Function(nameof(TestModelsController.CustomActionMethodWithSingleDtoReturnValueTest))
-                    .FindEntryAsync();
+                await client.TestModels()
+                    .CustomActionMethodWithSingleDtoReturnValueTest()
+                    .ExecuteAsSingleAsync();
             }
         }
 
@@ -60,9 +60,9 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                await client.Controller<TestModelsController, TestModel>()
-                    .Function(nameof(TestModelsController.CustomActionMethodWithArrayOfEntitiesReturnValueTest))
-                    .FindEntriesAsync();
+                await client.TestModels()
+                    .CustomActionMethodWithArrayOfEntitiesReturnValueTest()
+                    .ExecuteAsEnumerableAsync();
             }
         }
 
@@ -76,9 +76,9 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                await client.Controller<TestModelsController, TestModel>()
-                    .Function(nameof(TestModelsController.CustomActionMethodWithQueryableOfEntitiesReturnValueTest))
-                    .FindEntriesAsync();
+                await client.TestModels()
+                    .CustomActionMethodWithQueryableOfEntitiesReturnValueTest()
+                    .ExecuteAsEnumerableAsync();
             }
         }
     }

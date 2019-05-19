@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Test.Server;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Model.DomainModels;
@@ -37,14 +37,14 @@ namespace Bit.Tests.HtmlClient.ViewModel.Implementation
                     .Single();
 
                 A.CallTo(() => testModelsController.GetTestModelsByStringPropertyValue(1))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 ParentEntitiesController parentEntitiesController = TestDependencyManager.CurrentTestDependencyManager.Objects
                     .OfType<ParentEntitiesController>()
                     .Single();
 
                 A.CallTo(() => parentEntitiesController.GetTestData())
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -68,7 +68,7 @@ namespace Bit.Tests.HtmlClient.ViewModel.Implementation
                     .Last();
 
                 A.CallTo(() => parentEntitiesController.Create(A<ParentEntity>.That.Matches(p => p.Name == "!"), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
     }

@@ -1,5 +1,5 @@
 ﻿using NodaTime;
-using Rg.Plugins.Popup.Services;
+using Rg.Plugins.Popup.Extensions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,15 +11,16 @@ using Xamarin.Forms.Xaml;
 
 [assembly: XamlCompilation(XamlCompilationOptions.Compile)]
 
-namespace Bit.CSharpClient.Controls
+namespace Bit.View.Controls
 {
+    [IgnoreMeInNavigationStack]
     public partial class BitCalendarPopupView
     {
         public BitCalendarPopupView()
         {
             InitializeComponent();
 
-            SelectDateCommand = new Command<CalendarDay>(SyncViewModelWithView, selectedDate => selectedDate != null);
+            SelectDateTimeCommand = new Command<CalendarDay>(SyncViewModelWithView, selectedDateTime => selectedDateTime != null);
 
             ShowNextMonthCommand = new Command(ShowNextMonth);
 
@@ -52,11 +53,14 @@ namespace Bit.CSharpClient.Controls
                 bool isSelected = day == selectedDay ? true : false;
 
                 if (isSelected)
-                    SelectedDate = day.LocalDate.ToDateTimeUnspecified();
+                {
+                    DateTime newSelectedDateTime = day.LocalDate.ToDateTimeUnspecified();
+                    SelectedDateTime = new DateTime(newSelectedDateTime.Year, newSelectedDateTime.Month, newSelectedDateTime.Day, SelectedDateTime?.Hour ?? 0, SelectedDateTime?.Minute ?? 0, SelectedDateTime?.Second ?? 0);
+                }
             }
 
             if (AutoClose == true)
-                PopupNavigation.Instance.PopAsync();
+                Navigation.PopPopupAsync();
         }
 
         protected virtual void SyncViewWithViewModel()
@@ -66,18 +70,18 @@ namespace Bit.CSharpClient.Controls
                 if (day == null)
                     continue;
 
-                if (SelectedDate == null)
+                if (SelectedDateTime == null)
                 {
                     day.IsSelected = false;
                 }
                 else
                 {
-                    day.IsSelected = day.LocalDate.ToDateTimeUnspecified() == SelectedDate.Value ? true : false;
+                    day.IsSelected = day.LocalDate.ToDateTimeUnspecified().Date == SelectedDateTime.Value.Date ? true : false;
                 }
             }
 
             if (AutoClose == true)
-                PopupNavigation.Instance.PopAsync();
+                Navigation.PopPopupAsync();
         }
 
         public virtual void CalcCurrentMonthDays()
@@ -148,7 +152,7 @@ namespace Bit.CSharpClient.Controls
         public virtual List<CalendarDay> Days { get; protected set; }
         public virtual LocalDate CurrentDay { get; protected set; }
 
-        public virtual ICommand SelectDateCommand { get; protected set; }
+        public virtual ICommand SelectDateTimeCommand { get; protected set; }
         public virtual ICommand ShowNextMonthCommand { get; protected set; }
         public virtual ICommand ShowPreviousMonthCommand { get; protected set; }
 
@@ -181,15 +185,15 @@ namespace Bit.CSharpClient.Controls
             set { SetValue(FontFamilyProperty, value); }
         }
 
-        public static BindableProperty SelectedDateProperty = BindableProperty.Create(nameof(SelectedDate), typeof(DateTime?), typeof(BitCalendarPopupView), defaultValue: null, defaultBindingMode: BindingMode.TwoWay, propertyChanged: (sender, oldValue, newValue) =>
+        public static BindableProperty SelectedDateTimeProperty = BindableProperty.Create(nameof(SelectedDateTime), typeof(DateTime?), typeof(BitCalendarPopupView), defaultValue: null, defaultBindingMode: BindingMode.TwoWay, propertyChanged: (sender, oldValue, newValue) =>
         {
             BitCalendarPopupView calendarPopupView = (BitCalendarPopupView)sender;
             calendarPopupView.SyncViewWithViewModel();
         });
-        public virtual DateTime? SelectedDate
+        public virtual DateTime? SelectedDateTime
         {
-            get { return (DateTime?)GetValue(SelectedDateProperty); }
-            set { SetValue(SelectedDateProperty, value); }
+            get { return (DateTime?)GetValue(SelectedDateTimeProperty); }
+            set { SetValue(SelectedDateTimeProperty, value); }
         }
 
         public static BindableProperty TodayColorProperty = BindableProperty.Create(nameof(TodayColor), typeof(Color), typeof(BitCalendarPopupView), defaultValue: Color.DeepPink, defaultBindingMode: BindingMode.OneWay);
@@ -211,6 +215,13 @@ namespace Bit.CSharpClient.Controls
         {
             get { return (bool)GetValue(AutoCloseProperty); }
             set { SetValue(AutoCloseProperty, value); }
+        }
+
+        public static BindableProperty ShowTimePickerProperty = BindableProperty.Create(nameof(ShowTimePicker), typeof(bool), typeof(BitCalendarPopupView), defaultValue: true, defaultBindingMode: BindingMode.OneWay);
+        public virtual bool ShowTimePicker
+        {
+            get { return (bool)GetValue(ShowTimePickerProperty); }
+            set { SetValue(ShowTimePickerProperty, value); }
         }
     }
 

@@ -10,7 +10,11 @@ namespace Bit.CSharpClientSample.Data
 {
     public class SampleDbContext : EfCoreDbContextBase
     {
-        public IDeviceService DeviceService { get; set; }
+        public SampleDbContext(DbContextOptions options, IDeviceService deviceService)
+            : base(options)
+        {
+            DeviceService = deviceService;
+        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -32,5 +36,7 @@ namespace Bit.CSharpClientSample.Data
         }
 
         public virtual DbSet<TestCustomerDto> TestCustomers { get; set; }
+
+        public virtual IDeviceService DeviceService { get; }
     }
 }

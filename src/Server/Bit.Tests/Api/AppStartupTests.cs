@@ -2,7 +2,7 @@
 using System.Linq;
 using Bit.Core.Contracts;
 using Bit.Owin.Implementations;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using FakeItEasy;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -37,7 +37,7 @@ namespace Bit.Tests.Api
                 .OfType<IAppEvents>().ToList())
             {
                 A.CallTo(() => appEvents.OnAppEnd())
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -51,7 +51,7 @@ namespace Bit.Tests.Api
                     TestDependencyManager.CurrentTestDependencyManager.Objects.OfType<IAppEvents>().ToList())
                 {
                     A.CallTo(() => appEvents.OnAppStartup())
-                        .MustHaveHappened(Repeated.Exactly.Once);
+                        .MustHaveHappenedOnceExactly();
                 }
             }
         }

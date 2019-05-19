@@ -2,7 +2,7 @@
 using System.Threading;
 using Bit.Core.Contracts;
 using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Test.Server;
 using Bit.Tests.Api.ApiControllers;
 using FakeItEasy;
@@ -36,7 +36,7 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.KendoDataSourceTests
                     .Single();
 
                 A.CallTo(() => testModelsController.Get(A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 IEnumerable<ILogger> loggers = TestDependencyManager.CurrentTestDependencyManager.Objects
                     .OfType<ILogger>()
@@ -64,7 +64,7 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.KendoDataSourceTests
                     .Single();
 
                 A.CallTo(() => testModelsController.GetTestModelsByStringPropertyValue(1))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 IEnumerable<ILogger> loggers = TestDependencyManager.CurrentTestDependencyManager.Objects
                     .OfType<ILogger>()

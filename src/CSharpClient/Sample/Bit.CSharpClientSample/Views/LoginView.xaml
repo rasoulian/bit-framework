@@ -4,8 +4,6 @@
     xmlns="http://xamarin.com/schemas/2014/forms"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:bitView="clr-namespace:Bit.View;assembly=Bit.CSharpClient.Prism"
-    xmlns:vm="clr-namespace:Bit.CSharpClientSample.ViewModels"
-    x:DataType="vm:LoginViewModel"
     NavigationPage.HasNavigationBar="False">
     <ContentPage.Behaviors>
         <bitView:AdaptiveBehavior Orientation="Portrait">
@@ -49,8 +47,8 @@
     </ContentPage.Behaviors>
 
     <StackLayout>
-        <Entry Text="{Binding UserName}" />
-        <Entry Text="{Binding Password}" />
+        <Entry Text="{Binding UserName}" ReturnType="Next" ReturnCommand="{bitView:GoToNextViewCommand Next={x:Reference Password}}" />
+        <Entry x:Name="Password" Text="{Binding Password}" />
         <Button Command="{Binding LoginUsingCredentialsCommand}" Text="Login using credentials" />
         <Button Command="{Binding LoginUsingBrowserCommand}" Text="Login using Browser" />
         <Button Command="{Binding LoginUsingGooglePlusCommand}" Text="Login using Google" />

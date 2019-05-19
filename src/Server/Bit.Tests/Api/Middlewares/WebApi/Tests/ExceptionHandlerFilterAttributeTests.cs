@@ -2,7 +2,7 @@
 using Bit.Owin.Exceptions;
 using Bit.Owin.Metadata;
 using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Core.Contracts;
 using Bit.Tests.Model.DomainModels;
@@ -58,9 +58,8 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 try
                 {
-                    await client.Controller<TestModelsController, TestModel>()
-                        .Action(nameof(TestModelsController.SendEmail))
-                        .Set(new TestModelsController.EmailParameters { to = "Someone", title = "Email title", message = "Email message" })
+                    await client.TestModels()
+                        .SendEmail(to : "Someone", title : "Email title", message : "Email message")
                         .ExecuteAsync();
 
                     Assert.Fail();
@@ -111,9 +110,8 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 try
                 {
-                    await client.Controller<TestModelsController, TestModel>()
-                        .Action(nameof(TestModelsController.SendEmail))
-                        .Set(new TestModelsController.EmailParameters { to = "Someone", title = "Email title", message = "Email message" })
+                    await client.TestModels()
+                        .SendEmail(to : "Someone", title : "Email title", message : "Email message")
                         .ExecuteAsync();
 
                     Assert.Fail();
@@ -129,7 +127,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
         [TestMethod]
         [TestCategory("WebApi"), TestCategory("Logging")]
-        public virtual async Task WebApiExceptionHandlerFilterAttributeMustReturnUnKnownErrorReasonPhraseAndInternalServerErrorStatusCodeAndCorrelationIdInResponseWhenExceptionOtherThanAppExceptionIsThrown()
+        public virtual async Task WebApiExceptionHandlerFilterAttributeMustReturnUnknownErrorReasonPhraseAndInternalServerErrorStatusCodeAndCorrelationIdInResponseWhenExceptionOtherThanAppExceptionIsThrown()
         {
             IEmailService emailService = A.Fake<IEmailService>();
 
@@ -154,8 +152,8 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                 {
                     if (message.StatusCode == HttpStatusCode.InternalServerError)
                     {
-                        Assert.AreEqual(BitMetadataBuilder.UnKnownError, message.ReasonPhrase);
-                        Assert.IsTrue(message.Headers.Any(h => h.Key == "Reason-Phrase" && h.Value.Any(v => v == BitMetadataBuilder.UnKnownError)));
+                        Assert.AreEqual(BitMetadataBuilder.UnknownError, message.ReasonPhrase);
+                        Assert.IsTrue(message.Headers.Any(h => h.Key == "Reason-Phrase" && h.Value.Any(v => v == BitMetadataBuilder.UnknownError)));
 
                         ILogger logger = TestDependencyManager.CurrentTestDependencyManager.Objects
                             .OfType<ILogger>().Last();
@@ -168,16 +166,15 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 try
                 {
-                    await client.Controller<TestModelsController, TestModel>()
-                        .Action(nameof(TestModelsController.SendEmail))
-                        .Set(new TestModelsController.EmailParameters { to = "Someone", title = "Email title", message = "Email message" })
+                    await client.TestModels()
+                        .SendEmail(to: "Someone", title: "Email title", message: "Email message")
                         .ExecuteAsync();
 
                     Assert.Fail();
                 }
                 catch (WebRequestException ex)
                 {
-                    Assert.IsTrue(ex.Response.Contains(BitMetadataBuilder.UnKnownError));
+                    Assert.IsTrue(ex.Response.Contains(BitMetadataBuilder.UnknownError));
 
                     Assert.AreEqual(HttpStatusCode.InternalServerError, ex.Code);
                 }
@@ -196,7 +193,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 HttpResponseMessage response = await client.DeleteAsync("odata/Test/parentEntities(3)"); // no route for this url!
 
-                Assert.AreEqual("UnKnownError:Not Found", response.ReasonPhrase);
+                Assert.AreEqual("UnknownError:Not Found", response.ReasonPhrase);
             }
         }
     }

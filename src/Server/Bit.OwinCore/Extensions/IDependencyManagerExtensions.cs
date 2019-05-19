@@ -4,6 +4,7 @@ using Bit.Owin.Middlewares;
 using Bit.OwinCore.Contracts;
 using Bit.OwinCore.Implementations;
 using Bit.OwinCore.Middlewares;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Owin.Security.DataProtection;
 using System;
@@ -23,7 +24,7 @@ namespace Bit.Core.Contracts
             return dependencyManager;
         }
 
-        public static IDependencyManager RegisterAspNetCoreMiddlewareUsing(this IDependencyManager dependencyManager, Action<IApplicationBuilder> aspNetCoreAppCustomizer)
+        public static IDependencyManager RegisterAspNetCoreMiddlewareUsing(this IDependencyManager dependencyManager, Action<IApplicationBuilder> aspNetCoreAppCustomizer, MiddlewarePosition middlewarePosition = MiddlewarePosition.BeforeOwinMiddlewares)
         {
             if (dependencyManager == null)
                 throw new ArgumentNullException(nameof(dependencyManager));
@@ -31,7 +32,18 @@ namespace Bit.Core.Contracts
             if (aspNetCoreAppCustomizer == null)
                 throw new ArgumentNullException(nameof(aspNetCoreAppCustomizer));
 
-            dependencyManager.RegisterInstance<IAspNetCoreMiddlewareConfiguration>(new DelegateAspNetCoreMiddlewareConfiguration(aspNetCoreAppCustomizer), overwriteExciting: false);
+            dependencyManager.RegisterInstance<IAspNetCoreMiddlewareConfiguration>(new DelegateAspNetCoreMiddlewareConfiguration(aspNetCoreAppCustomizer)
+            {
+                MiddlewarePosition = middlewarePosition
+            }, overwriteExciting: false);
+
+            return dependencyManager;
+        }
+
+        public static IDependencyManager RegisterApplicationInsights(this IDependencyManager dependencyManager)
+        {
+            dependencyManager.Register<ITelemetryInitializer, BitTelemetryInitializer>(lifeCycle: DependencyLifeCycle.SingleInstance, overwriteExciting: false);
+            dependencyManager.RegisterLogStore<ApplicationInsightsLogStore>();
 
             return dependencyManager;
         }
@@ -59,6 +71,24 @@ namespace Bit.Core.Contracts
         {
             dependencyManager.RegisterAspNetCoreMiddlewareUsing(aspNetCoreApp =>
             {
+                aspNetCoreApp.Use(async (context, next) =>
+                {
+                    if (context.Request.Path.HasValue)
+                    {
+                        string path = context.Request.Path.Value;
+
+                        if (path.StartsWith("/core", StringComparison.InvariantCultureIgnoreCase) || path.StartsWith("/signalr", StringComparison.InvariantCultureIgnoreCase) || path.StartsWith("/jobs", StringComparison.InvariantCultureIgnoreCase) || path.EndsWith("$batch", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            context.Features.GetType().GetProperty("AllowSynchronousIO")?.SetValue(context.Features, true);
+                        }
+                    }
+
+                    await next.Invoke();
+                });
+            });
+
+            dependencyManager.RegisterAspNetCoreMiddlewareUsing(aspNetCoreApp =>
+            {
                 aspNetCoreApp.UseMiddleware<AddAcceptCharsetToRequestHeadersIfNotAnyAspNetCoreMiddleware>();
             });
             dependencyManager.RegisterOwinMiddleware<AspNetCoreAutofacDependencyInjectionMiddlewareConfiguration>();
@@ -73,6 +103,7 @@ namespace Bit.Core.Contracts
         /// | <see cref="IExceptionToHttpErrorMapper"/> by <see cref="DefaultExceptionToHttpErrorMapper"/>
         /// | <see cref="ITimeZoneManager"/> by <see cref="DefaultTimeZoneManager"/>
         /// | <see cref="IRequestInformationProvider"/> by <see cref="AspNetCoreRequestInformationProvider"/>
+        /// | <see cref="IRouteValuesProvider"/> by <see cref="AspNetCoreRouteValuesProvider"/>
         /// | On Mono, it registers <see cref="IDataProtectionProvider"/> by <see cref="SystemCryptoBasedDataProtectionProvider"/>
         /// </summary>
         public static IDependencyManager RegisterDefaultAspNetCoreApp(this IDependencyManager dependencyManager)
@@ -85,6 +116,7 @@ namespace Bit.Core.Contracts
             dependencyManager.Register<IDataProtectionProvider, SystemCryptoBasedDataProtectionProvider>(lifeCycle: DependencyLifeCycle.SingleInstance, overwriteExciting: false);
             dependencyManager.Register<IClientProfileModelProvider, DefaultClientProfileModelProvider>(overwriteExciting: false);
             dependencyManager.Register<IHtmlPageProvider, DefaultHtmlPageProvider>(overwriteExciting: false);
+            dependencyManager.Register<IRouteValuesProvider, AspNetCoreRouteValuesProvider>(lifeCycle: DependencyLifeCycle.SingleInstance, overwriteExciting: false);
             return dependencyManager;
         }
     }

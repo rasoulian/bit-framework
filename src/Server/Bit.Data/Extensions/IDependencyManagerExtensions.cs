@@ -16,38 +16,8 @@ namespace Bit.Core.Contracts
             if (dependencyManager == null)
                 throw new ArgumentNullException(nameof(dependencyManager));
 
-            dependencyManager.RegisterGeneric(typeof(IDtoEntityMapper<,>).GetTypeInfo(), typeof(DefaultDtoEntityMapper<,>).GetTypeInfo(), DependencyLifeCycle.SingleInstance);
-
-            IMapper RegisterMapper(IDependencyResolver resolver)
-            {
-                IEnumerable<IMapperConfiguration> configs = resolver.Resolve<IEnumerable<IMapperConfiguration>>();
-
-                void ConfigureMapper(IMapperConfigurationExpression cfg)
-                {
-                    configs.ToList().ForEach(c => c.Configure(cfg));
-                }
-
-                MapperConfiguration mapperConfig = new MapperConfiguration(ConfigureMapper);
-
-                IMapper mapper = mapperConfig.CreateMapper();
-
-                return mapper;
-            }
-
-            dependencyManager.RegisterUsing(RegisterMapper, lifeCycle: DependencyLifeCycle.SingleInstance, overwriteExciting: false);
-
-            return dependencyManager;
-        }
-
-        public static IDependencyManager RegisterMapperConfiguration<TMapperConfiguration>(this IDependencyManager dependencyManager)
-            where TMapperConfiguration : class, IMapperConfiguration
-        {
-            if (dependencyManager == null)
-                throw new ArgumentNullException(nameof(dependencyManager));
-
-            dependencyManager.Register<IMapperConfiguration, TMapperConfiguration>(lifeCycle: DependencyLifeCycle.SingleInstance, overwriteExciting: false);
-
-            return dependencyManager;
+            dependencyManager.RegisterGeneric(typeof(IDtoEntityMapper<,>).GetTypeInfo(), typeof(DefaultDtoEntityMapper<,>).GetTypeInfo(), DependencyLifeCycle.PerScopeInstance);
+            return dependencyManager.RegisterAutoMapper();
         }
 
         public static IDependencyManager RegisterRepository(this IDependencyManager dependencyManager, TypeInfo repositoryType)
@@ -58,8 +28,7 @@ namespace Bit.Core.Contracts
             if (repositoryType == null)
                 throw new ArgumentNullException(nameof(repositoryType));
 
-            HashSet<TypeInfo> interfaces = new HashSet<TypeInfo>();
-            GetAllInterfaces(repositoryType, ref interfaces);
+            IEnumerable<TypeInfo> interfaces = repositoryType.GetInterfaces().Select(p => p.GetTypeInfo());
 
             TypeInfo[] repositoryContracts = interfaces
                 .Where(IsRepositoryContract)
@@ -82,24 +51,9 @@ namespace Bit.Core.Contracts
             if (type == null)
                 throw new NullReferenceException();
 
-            HashSet<TypeInfo> allInterfaces = new HashSet<TypeInfo>
-            {
-                type
-            };
-
-            GetAllInterfaces(type, ref allInterfaces);
-
-            return allInterfaces.Any(i => i.IsGenericType && i.GetGenericTypeDefinition().GetTypeInfo() == typeof(IRepository<>).GetTypeInfo());
-        }
-
-        private static void GetAllInterfaces(TypeInfo type, ref HashSet<TypeInfo> result)
-        {
-            foreach (TypeInfo i in type.GetInterfaces())
-            {
-                result.Add(i);
-
-                GetAllInterfaces(i, ref result);
-            }
+            return type.GetInterfaces()
+                .Select(p => p.GetTypeInfo()).Concat(new[] { type })
+                .Any(i => i.IsGenericType && i.GetGenericTypeDefinition().GetTypeInfo() == typeof(IRepository<>).GetTypeInfo());
         }
     }
 }

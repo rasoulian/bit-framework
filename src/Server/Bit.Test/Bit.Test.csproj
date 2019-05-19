@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>net461;netcoreapp2.2</TargetFrameworks>
-    <AssemblyVersion>0.0.0.1</AssemblyVersion>
-    <FileVersion>0.0.0.1</FileVersion>
-    <Version>0.0.1</Version>
+    <Version>$(Bit-Package-Version)</Version>
+    <AssemblyVersion>$(Bit-Assembly-Version)</AssemblyVersion>
+    <PackageVersion>$(Bit-Package-Version)</PackageVersion>
     <Authors>Bit Foundation</Authors>
     <Company>Bit Foundation</Company>
     <Product>Bit Framework</Product>
@@ -22,6 +22,8 @@
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <LangVersion>7.3</LangVersion>
     <NoWarn>$(NoWarn);CS1591;NU1701</NoWarn>
+    <DefineConstants Condition=" '$(TargetFramework)' == 'net461' ">DotNet</DefineConstants>
+    <DefineConstants Condition=" '$(TargetFramework)' == 'netcoreapp2.2' ">DotNetCore</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,16 +31,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FakeItEasy" Version="5.0.1" />
-    <PackageReference Include="Microsoft.AspNet.SignalR.Client" Version="2.4.0" />
+    <PackageReference Include="FakeItEasy" Version="5.1.1" />
+    <PackageReference Include="Microsoft.AspNet.SignalR.Client" Version="2.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="2.2.0" />
     <PackageReference Include="Microsoft.Owin.SelfHost" Version="4.0.1" />
     <PackageReference Include="Microsoft.Owin.Testing" Version="4.0.1" />
-    <PackageReference Include="Refit" Version="4.6.58" />
+    <PackageReference Include="Refit" Version="4.6.107" />
     <PackageReference Include="Selenium.Support" Version="3.141.0" />
     <PackageReference Include="Selenium.WebDriver" Version="3.141.0" />
-    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="2.46.0" />
-    <PackageReference Include="Simple.OData.V4.Client" Version="5.6.2" />
+    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="74.0.3729.6" />
+    <PackageReference Include="Simple.OData.V4.Client" Version="5.7.0" />
     <PackageReference Include="SourceLink.Embed.AllSourceFiles" Version="2.8.3" PrivateAssets="all" />
     <PackageReference Include="SourceLink.Copy.PdbFiles" Version="2.8.3" PrivateAssets="All" />
   </ItemGroup>

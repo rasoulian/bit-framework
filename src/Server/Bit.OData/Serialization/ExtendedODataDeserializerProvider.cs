@@ -3,7 +3,6 @@ using Microsoft.AspNet.OData.Formatter.Deserialization;
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Web.Http.Controllers;
 
 namespace Bit.OData.Serialization
@@ -15,24 +14,24 @@ namespace Bit.OData.Serialization
         {
         }
 
-        public ExtendedODataDeserializerProvider(IServiceProvider rootContainer)
+        public ExtendedODataDeserializerProvider(IServiceProvider rootContainer, DefaultODataActionCreateUpdateParameterDeserializer defaultODataActionCreateUpdateParameterDeserializer)
             : base(rootContainer)
         {
-            _defaultODataParameterDeserializerValue = new Lazy<DefaultODataActionCreateUpdateParameterDeserializer>(() => (DefaultODataActionCreateUpdateParameterDeserializer)rootContainer.GetService(typeof(DefaultODataActionCreateUpdateParameterDeserializer).GetTypeInfo()), isThreadSafe: true);
+            _defaultODataActionCreateUpdateParameterDeserializer = defaultODataActionCreateUpdateParameterDeserializer;
         }
 
-        private readonly Lazy<DefaultODataActionCreateUpdateParameterDeserializer> _defaultODataParameterDeserializerValue;
+        readonly DefaultODataActionCreateUpdateParameterDeserializer _defaultODataActionCreateUpdateParameterDeserializer;
 
         public override ODataDeserializer GetODataDeserializer(Type type, HttpRequestMessage request)
         {
             HttpActionDescriptor actionDescriptor = request.GetActionDescriptor();
 
-            if (actionDescriptor != null && (actionDescriptor.GetCustomAttributes<ActionAttribute>().Any() ||
+            if (actionDescriptor != null && request?.Content?.Headers?.ContentLength != 0 && (actionDescriptor.GetCustomAttributes<ActionAttribute>().Any() ||
                 actionDescriptor.GetCustomAttributes<CreateAttribute>().Any() ||
                 actionDescriptor.GetCustomAttributes<UpdateAttribute>().Any() ||
                 actionDescriptor.GetCustomAttributes<PartialUpdateAttribute>().Any()))
             {
-                return _defaultODataParameterDeserializerValue.Value;
+                return _defaultODataActionCreateUpdateParameterDeserializer;
             }
 
             return base.GetODataDeserializer(type, request);

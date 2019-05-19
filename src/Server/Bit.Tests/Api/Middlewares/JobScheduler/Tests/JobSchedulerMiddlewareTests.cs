@@ -13,7 +13,7 @@ using System;
 using Bit.OData.ODataControllers;
 using Bit.Core.Contracts;
 using Bit.Model.Dtos;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using System.Linq;
 
 namespace Bit.Tests.Api.Middlewares.JobScheduler.Tests
@@ -76,9 +76,8 @@ namespace Bit.Tests.Api.Middlewares.JobScheduler.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                string jobId = (await client.Controller<TestModelsController, TestModel>()
-                    .Action(nameof(TestModelsController.SendEmailUsingBackgroundJobService))
-                    .Set(new TestModelsController.EmailParameters { to = "Someone", title = "Email title", message = "Email message" })
+                string jobId = (await client.TestModels()
+                    .SendEmailUsingBackgroundJobService("Someone", "Email title", "Email message")
                     .ExecuteAsScalarAsync<Guid>()).ToString();
 
                 IODataClient bitODataClient = testEnvironment.Server.BuildODataClient(token: token, odataRouteName: "Bit");
@@ -134,14 +133,13 @@ namespace Bit.Tests.Api.Middlewares.JobScheduler.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                string jobId = (await client.Controller<TestModelsController, TestModel>()
-                    .Action(nameof(TestModelsController.SendEmailUsingBackgroundJobServiceAndPushAfterThat))
-                    .Set(new TestModelsController.EmailParameters { to = "SomeOne", title = "Email title", message = "Email message" })
-                    .ExecuteAsScalarAsync<Guid>()).ToString();
+                string jobId = (await client.TestModels()
+                                    .SendEmailUsingBackgroundJobServiceAndPushAfterThat(to: "SomeOne", title: "Email title", message: "Email message")
+                                    .ExecuteAsScalarAsync<Guid>()).ToString();
 
                 IODataClient bitODataClient = testEnvironment.Server.BuildODataClient(token: token, odataRouteName: "Bit");
 
-                JobInfoDto jobInfo = await bitODataClient.Controller<JobsInfoController, JobInfoDto>()
+                JobInfoDto jobInfo = await bitODataClient.JobsInfo()
                     .Key(jobId)
                     .FindEntryAsync();
 
@@ -150,7 +148,7 @@ namespace Bit.Tests.Api.Middlewares.JobScheduler.Tests
 
                 await Task.Delay(TimeSpan.FromSeconds(1));
 
-                jobInfo = await bitODataClient.Controller<JobsInfoController, JobInfoDto>()
+                jobInfo = await bitODataClient.JobsInfo()
                     .Key(jobId)
                     .FindEntryAsync();
 
@@ -195,9 +193,8 @@ namespace Bit.Tests.Api.Middlewares.JobScheduler.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                string jobId = (await client.Controller<TestModelsController, TestModel>()
-                    .Action(nameof(TestModelsController.SendEmailUsingBackgroundJobService))
-                    .Set(new TestModelsController.EmailParameters { to = "Someone", title = "Email title", message = "Email message" })
+                string jobId = (await client.TestModels()
+                    .SendEmailUsingBackgroundJobService(to: "Someone", title: "Email title", message: "Email message")
                     .ExecuteAsScalarAsync<Guid>()).ToString();
 
                 Assert.AreEqual(true, await emailSent.Task);
@@ -207,7 +204,7 @@ namespace Bit.Tests.Api.Middlewares.JobScheduler.Tests
                    .Last();
 
                 A.CallTo(() => logger.LogException(A<Exception>.That.Matches(e => e is InvalidOperationException), A<string>.That.Matches(errMsg => errMsg.Contains(jobId))))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 Assert.AreEqual(2, tryCount);
             }

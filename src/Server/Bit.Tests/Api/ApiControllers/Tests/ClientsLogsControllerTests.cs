@@ -1,14 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.OData.ODataControllers;
-using Bit.Core.Contracts;
+﻿using Bit.Core.Contracts;
 using Bit.Model.Dtos;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using FakeItEasy;
 using IdentityModel.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Simple.OData.Client;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Bit.Tests.Api.ApiControllers.Tests
 {
@@ -25,9 +24,8 @@ namespace Bit.Tests.Api.ApiControllers.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token, odataRouteName: "Bit");
 
-                await client.Controller<ClientsLogsController, ClientLogDto>()
-                    .Action(nameof(ClientsLogsController.StoreClientLogs))
-                    .Set(new ClientsLogsController.StoreClientLogsParameters { clientLogs = new[] { new ClientLogDto { Message = "1", Route = "R" } } })
+                await client.ClientsLogs()
+                    .StoreClientLogs(new[] { new ClientLogDto { Message = "1", Route = "R" } })
                     .ExecuteAsync();
 
                 ILogger logger = TestDependencyManager.CurrentTestDependencyManager
@@ -35,10 +33,10 @@ namespace Bit.Tests.Api.ApiControllers.Tests
                     .Last();
 
                 A.CallTo(() => logger.LogWarningAsync("Client-Log"))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => logger.AddLogData("ClientLogs", A<IEnumerable<ClientLogDto>>.That.Matches(logs => logs.Single().Message == "1")))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
     }

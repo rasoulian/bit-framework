@@ -64,6 +64,14 @@ namespace Bit.Core.Models
                 return value;
         }
 
+        public virtual T GetConfig<T>(string configKey, Func<T> defaultValueOnNotFoundProvider)
+        {
+            if (!TryGetConfig(configKey, out T value))
+                return defaultValueOnNotFoundProvider();
+            else
+                return value;
+        }
+
         public virtual string GetHostVirtualPath()
         {
             return GetConfig("HostVirtualPath", "/");
@@ -90,6 +98,11 @@ namespace Bit.Core.Models
                 throw new ArgumentNullException(nameof(configKey));
 
             return Configs.Any(c => string.Equals(c.Key, configKey, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public virtual void AddOrReplace<T>(string key, T value)
+        {
+            AddOrReplace(new EnvironmentConfig { Key = key, Value = value });
         }
 
         public virtual void AddOrReplace(EnvironmentConfig config)

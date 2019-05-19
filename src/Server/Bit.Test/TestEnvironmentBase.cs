@@ -3,7 +3,7 @@ using Bit.Core.Contracts;
 using Bit.Core.Implementations;
 using Bit.Core.Models;
 using Bit.Owin.Implementations;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Test.Server;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -21,7 +21,11 @@ namespace Bit.Test
 
         public bool UseRealServer { get; set; }
 
-        public bool UseAspNetCore { get; set; }
+#if DotNet
+        public bool UseAspNetCore { get; set; } = true;
+#else
+        public bool UseAspNetCore { get; set; } = true;
+#endif
 
         public bool UseHttps { get; set; }
 
@@ -139,6 +143,7 @@ namespace Bit.Test
             {
                 implementationType => GetBaseTypes(implementationType).Any(t => t.Name == "DbContext"),
                 implementationType => GetBaseTypes(implementationType).Any(t => t.Name == "Hub"),
+                implementationType => GetBaseTypes(implementationType).Any(t => t.Name == "Profile"), /*AutoMapper*/
                 implementationType => implementationType.IsArray
             };
         }

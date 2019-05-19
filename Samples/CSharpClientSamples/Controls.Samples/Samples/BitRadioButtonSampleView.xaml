@@ -4,7 +4,7 @@
     xmlns="http://xamarin.com/schemas/2014/forms"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:app="clr-namespace:Bit.CSharpClient.Controls.Samples"
-    xmlns:bitControls="clr-namespace:Bit.CSharpClient.Controls;assembly=Bit.CSharpClient.Controls">
+    xmlns:bitControls="clr-namespace:Bit.View.Controls;assembly=Bit.CSharpClient.Controls">
 
     <ContentPage.BindingContext>
         <app:BitRadioButtonSampleViewModel />
@@ -23,16 +23,22 @@
     <StackLayout Padding="10">
         <bitControls:BitRadioButton
             Key="{x:Static app:Gender.Man}"
+            Value="{Binding Person.Gender}"
             Style="{StaticResource BitRadioButtonStyles}"
             Text="Man" />
         <bitControls:BitRadioButton
             Key="{x:Static app:Gender.Woman}"
+            Value="{Binding Person.Gender}"
             Style="{StaticResource BitRadioButtonStyles}"
             Text="Woman" />
         <bitControls:BitRadioButton
             Key="{x:Static app:Gender.Other}"
+            Value="{Binding Person.Gender}"
             Style="{StaticResource BitRadioButtonStyles}"
             Text="Other" />
+
+        <Label Text="{Binding Person.Gender}" />
+
     </StackLayout>
 
 </ContentPage>

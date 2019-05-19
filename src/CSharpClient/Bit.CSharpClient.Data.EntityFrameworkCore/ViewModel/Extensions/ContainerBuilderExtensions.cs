@@ -1,22 +1,24 @@
-﻿using Autofac;
-using Bit.Data;
+﻿using Bit.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Reflection;
 
-namespace Prism.Ioc
+namespace Autofac
 {
     public static class ContainerBuilderExtensions
     {
-        public static ContainerBuilder RegisterDbContext<TDbContext>(this ContainerBuilder containerBuilder)
+        public static ContainerBuilder RegisterDbContext<TDbContext>(this ContainerBuilder containerBuilder, Action<DbContextOptionsBuilder> optionsAction = null)
             where TDbContext : EfCoreDbContextBase
         {
             if (containerBuilder == null)
                 throw new ArgumentNullException(nameof(containerBuilder));
 
-            containerBuilder
-                .RegisterType<TDbContext>()
-                .As(new[] { typeof(EfCoreDbContextBase).GetTypeInfo(), typeof(TDbContext).GetTypeInfo() })
-                .PropertiesAutowired(PropertyWiringOptions.PreserveSetValues);
+            IServiceCollection services = (IServiceCollection)containerBuilder.Properties[nameof(services)];
+
+            services.AddEntityFrameworkSqlite();
+            services.AddDbContext<TDbContext>(optionsAction, contextLifetime: ServiceLifetime.Transient, optionsLifetime: ServiceLifetime.Transient);
+
+            containerBuilder.Register(c => (EfCoreDbContextBase)c.Resolve<TDbContext>());
 
             return containerBuilder;
         }

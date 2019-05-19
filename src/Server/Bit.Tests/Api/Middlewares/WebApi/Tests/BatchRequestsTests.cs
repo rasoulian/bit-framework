@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Contracts;
 using Bit.Data.Contracts;
 using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Core.Contracts;
 using Bit.Tests.Model.DomainModels;
@@ -38,16 +38,16 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                     Version = 1
                 };
 
-                batchClient += bc => bc.Controller<TestModelsController, TestModel>()
+                batchClient += bc => bc.TestModels()
                     .Set(modelBeforeInsert)
                     .CreateEntryAsync();
 
-                long modelBeforeUpdateId = await client.Controller<TestModelsController, TestModel>()
+                long modelBeforeUpdateId = await client.TestModels()
                         .Top(1)
                         .Select(t => t.Id)
                         .FindScalarAsync<long>();
 
-                batchClient += bc => bc.Controller<TestModelsController, TestModel>()
+                batchClient += bc => bc.TestModels()
                      .Key(modelBeforeUpdateId)
                      .Set(new { StringProperty = "Test2" })
                      .UpdateEntryAsync();
@@ -62,10 +62,10 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                 A.CallTo(() => testModelsRepository.UpdateAsync(
                             A<TestModel>.That.Matches(testModel => testModel.StringProperty == "Test2"),
                             A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => testModelsRepository.AddAsync(A<TestModel>.That.Matches(testModel => testModel.StringProperty == "Test"), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -102,14 +102,12 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 try
                 {
-                    client += c => c.Controller<TestModelsController, TestModel>()
-                        .Action(nameof(TestModelsController.SendEmail))
-                        .Set(new TestModelsController.EmailParameters { to = "Exception", title = "Email title", message = "Email message" })
+                    client += c => c.TestModels()
+                        .SendEmail(to : "Exception", title : "Email title", message : "Email message")
                         .ExecuteAsync();
 
-                    client += c => c.Controller<TestModelsController, TestModel>()
-                                        .Action(nameof(TestModelsController.SendEmail))
-                                        .Set(new TestModelsController.EmailParameters { to = "Work", title = "Email title", message = "Email message" })
+                    client += c => c.TestModels()
+                                        .SendEmail(to : "Work", title : "Email title", message : "Email message")
                                         .ExecuteAsync();
 
                     await client.ExecuteAsync();
@@ -131,10 +129,10 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                         .OfType<ILogger>().Last();
 
                     A.CallTo(() => controller.SendEmail(A<TestModelsController.EmailParameters>.Ignored))
-                                            .MustHaveHappened(Repeated.Exactly.Once);
+                                            .MustHaveHappenedOnceExactly();
 
                     A.CallTo(() => logger.LogFatalAsync(A<string>.That.Matches(msg => msg == "Scope was failed: Operation is not valid due to the current state of the object.")))
-                                            .MustHaveHappened(Repeated.Exactly.Once);
+                                            .MustHaveHappenedOnceExactly();
                 }
             }
         }

@@ -39,28 +39,23 @@ namespace Bit.Tests.Api.ApiControllers
         }
 
         [Get]
-        public virtual async Task<TestModel> Get(long key, CancellationToken cancellationToken)
+        public virtual async Task<SingleResult<TestModel>> Get(long key, CancellationToken cancellationToken)
         {
-            TestModel testModel = await (await TestModelsRepository.Value
+            return SingleResult((await TestModelsRepository.Value
                 .GetAllAsync(cancellationToken))
-                .FirstOrDefaultAsync(t => t.Id == key, cancellationToken);
-
-            if (testModel == null)
-                throw new ResourceNotFoundException();
-
-            return testModel;
+                .Where(t => t.Id == key));
         }
 
         [Create]
-        public virtual async Task<TestModel> Create(TestModel model, CancellationToken cancellationToken)
+        public virtual async Task<SingleResult<TestModel>> Create(TestModel model, CancellationToken cancellationToken)
         {
             model = await TestModelsRepository.Value.AddAsync(model, cancellationToken);
 
-            return model;
+            return SingleResult(model);
         }
 
         [PartialUpdate]
-        public virtual async Task<TestModel> PartialUpdate(long key, Delta<TestModel> modelDelta,
+        public virtual async Task<SingleResult<TestModel>> PartialUpdate(long key, Delta<TestModel> modelDelta,
             CancellationToken cancellationToken)
         {
             TestModel model = await (await TestModelsRepository.Value.GetAllAsync(cancellationToken))
@@ -73,11 +68,11 @@ namespace Bit.Tests.Api.ApiControllers
 
             model = await TestModelsRepository.Value.UpdateAsync(model, cancellationToken);
 
-            return model;
+            return SingleResult(model);
         }
 
         [Update]
-        public virtual async Task<TestModel> Update(long key, TestModel model,
+        public virtual async Task<SingleResult<TestModel>> Update(long key, TestModel model,
             CancellationToken cancellationToken)
         {
             model = await TestModelsRepository.Value.UpdateAsync(model, cancellationToken);
@@ -85,7 +80,7 @@ namespace Bit.Tests.Api.ApiControllers
             if (model.Id != key)
                 throw new BadRequestException();
 
-            return model;
+            return SingleResult(model);
         }
 
         [Delete]
@@ -234,11 +229,11 @@ namespace Bit.Tests.Api.ApiControllers
         }
 
         [Function]
-        public virtual async Task<TestModel> CustomActionMethodWithSingleDtoReturnValueTest(CancellationToken cancellationToken)
+        public virtual async Task<SingleResult<TestModel>> CustomActionMethodWithSingleDtoReturnValueTest(CancellationToken cancellationToken)
         {
-            return await (await TestModelsRepository.Value
+            return SingleResult(await (await TestModelsRepository.Value
                 .GetAllAsync(cancellationToken))
-                .FirstAsync(cancellationToken);
+                .FirstAsync(cancellationToken));
         }
 
         [Function]
@@ -418,19 +413,31 @@ namespace Bit.Tests.Api.ApiControllers
         {
             IDependencyResolver dependencyResolver = Request.GetOwinContext().GetDependencyResolver();
             IValueChecker valueChecker = dependencyResolver.Resolve<IValueChecker>();
-            IODataSqlBuilder odataSqlBuilder = dependencyResolver.Resolve<IODataSqlBuilder>();
-            ODataSqlQueryParts sqlParts = odataSqlBuilder.BuildSqlQueryParts(odataQuery);
+            ODataSqlQueryParts sqlParts = odataQuery;
             valueChecker.CheckValue(sqlParts.WhereClause);
             valueChecker.CheckValue(sqlParts.OrderByClause);
             valueChecker.CheckValue(sqlParts.Top);
             valueChecker.CheckValue(sqlParts.Skip);
             valueChecker.CheckValue(sqlParts.Parameters.Values.ToArray());
-            ODataSqlQuery sql = odataSqlBuilder.BuildSqlQuery(odataQuery, tableName: "Test.TestModels");
+            IODataSqlBuilder odataSqlBuilder = dependencyResolver.Resolve<IODataSqlBuilder>();
+            ODataSqlQuery sql = odataSqlBuilder.BuildSqlQuery(GetODataQueryOptions(), tableName: "Test.TestModels");
             valueChecker.CheckValue(sql.SelectQuery);
             valueChecker.CheckValue(sql.SelectTotalCountQuery);
             valueChecker.CheckValue(sql.Parts.GetTotalCountFromDb);
 
             return new TestModel[] { }.AsQueryable();
+        }
+
+        [Function]
+        public virtual string CreateODataLinkSample()
+        {
+            return CreateODataLink(action: "SumFunction", routeValues: new { n1 = 1, n2 = 2 });
+        }
+
+        [Function]
+        public virtual int SumFunction(int n1, int n2)
+        {
+            return n1 + n2;
         }
     }
 }

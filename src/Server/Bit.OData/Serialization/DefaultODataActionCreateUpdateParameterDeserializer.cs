@@ -11,7 +11,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -30,13 +29,10 @@ namespace Bit.OData.Serialization
 
         }
 
-        public DefaultODataActionCreateUpdateParameterDeserializer(System.Web.Http.Dependencies.IDependencyResolver dependencyResolver)
+        public DefaultODataActionCreateUpdateParameterDeserializer(IEnumerable<IStringCorrector> stringCorrectors)
             : base(ODataPayloadKind.Parameter)
         {
-            if (dependencyResolver == null)
-                throw new ArgumentNullException(nameof(dependencyResolver));
-
-            _stringCorrectorsConverters = new ODataJsonDeSerializerStringCorrector(dependencyResolver.GetServices(typeof(IStringCorrector).GetTypeInfo()).Cast<IStringCorrector>().ToArray());
+            _stringCorrectorsConverters = new ODataJsonDeSerializerStringCorrector(stringCorrectors.ToArray());
             _odataJsonDeserializerEnumConverter = new ODataJsonDeSerializerEnumConverter();
         }
 
@@ -70,6 +66,11 @@ namespace Bit.OData.Serialization
                         }
 
                         e.ErrorContext.Handled = true;
+                    }
+
+                    if (e.ErrorContext.Handled == false)
+                    {
+                        readContext.Request.Properties["Request_Body_Json_Parse_Error"] = e.ErrorContext.Error; // This code is being executed in a try/catch which is located in ODataMediaTypeFormatter. That class will return defaul value (null) to actions which results into NRE in most cases.
                     }
                 }
 

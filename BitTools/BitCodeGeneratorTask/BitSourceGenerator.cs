@@ -1,126 +1,95 @@
-﻿using BitCodeGenerator.Implementations;
-using BitCodeGenerator.Implementations.TypeScriptClientProxyGenerator;
-using BitTools.Core.Contracts;
-using BitTools.Core.Model;
-using Microsoft.Build.Construction;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.MSBuild;
+﻿using Microsoft.Build.Framework;
+using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Uno.SourceGeneration;
+using System.Threading;
 
 namespace BitCodeGeneratorTask
 {
-    public class BitSourceGenerator : SourceGenerator
+    public class BitSourceGenerator : Microsoft.Build.Utilities.Task
     {
-        private ISourceGeneratorLogger _logger;
-
-        public override void Execute(SourceGeneratorContext context)
-        {
-#if DEBUG
-            Debugger.Launch();
-#endif
-
-            _logger = context.GetLogger();
-
-            DirectoryInfo projDir = new DirectoryInfo(Path.GetDirectoryName(context.Project.FilePath) ?? throw new InvalidOperationException("Context's project's file path is null"));
-
-            string solutionFullName = null;
-
-            while (projDir.Parent != null)
-            {
-                string filePath = Path.Combine(projDir.FullName, "BitConfigV1.json");
-
-                if (File.Exists(filePath))
-                {
-                    solutionFullName = Directory.EnumerateFiles(projDir.FullName, "*.sln").FirstOrDefault();
-                    break;
-                }
-
-                projDir = projDir.Parent;
-            }
-
-            CallGenerateCodes((MSBuildWorkspace)context.Project.Solution.Workspace, context.Project, solutionFullName).GetAwaiter().GetResult();
-        }
-
-        private async Task CallGenerateCodes(MSBuildWorkspace workspace, Project beingCompiledProject, string solutionFullName)
+        public override bool Execute()
         {
             Stopwatch sw = null;
 
             try
             {
-                sw = Stopwatch.StartNew();
+                LogMessage($"Code generation started for project: {ProjectPath}");
 
-                workspace.WorkspaceFailed += MSBuildWorkspace_WorkspaceFailed;
-                workspace.SkipUnrecognizedProjects = workspace.LoadMetadataForReferencedProjects = true;
+                const string subkey = @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\";
 
-                IReadOnlyList<ProjectInSolution> allProjects = SolutionFile.Parse(solutionFullName).ProjectsInOrder;
-
-                BitSourceGeneratorBitConfigProvider bitConfigProvider = new BitSourceGeneratorBitConfigProvider(solutionFullName);
-
-                foreach (BitCodeGeneratorMapping mapping in bitConfigProvider.GetConfiguration(workspace).BitCodeGeneratorConfigs.BitCodeGeneratorMappings.Where(config => config.SourceProjects.Any(sp => sp.Name == beingCompiledProject.Name)))
+                using (RegistryKey ndpKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32).OpenSubKey(subkey))
                 {
-                    foreach (BitTools.Core.Model.ProjectInfo proj in mapping.SourceProjects)
-                    {
-                        if (workspace.CurrentSolution.Projects.Any(p => p.Name == proj.Name))
-                            continue; /*It's already loaded*/
-
-                        await workspace.OpenProjectAsync(allProjects.ExtendedSingle($"Trying to find source project {proj.Name}", p => p.ProjectName == proj.Name).AbsolutePath);
-                    }
-
-                    if (!workspace.CurrentSolution.Projects.Any(p => p.Name == mapping.DestinationProject.Name))
-                        await workspace.OpenProjectAsync(allProjects.ExtendedSingle($"Trying to find destination project {mapping.DestinationProject.Name}", p => p.ProjectName == mapping.DestinationProject.Name).AbsolutePath);
+                    if (ndpKey == null || !(ndpKey.GetValue("Release") is int release) || release < 461808)
+                        throw new InvalidOperationException("You've to install .NET 4.7.2+ on your dev machine.");
                 }
 
-                IProjectDtoControllersProvider controllersProvider = new DefaultProjectDtoControllersProvider();
-                IProjectDtosProvider dtosProvider = new DefaultProjectDtosProvider(controllersProvider);
+                sw = Stopwatch.StartNew();
 
-                DefaultTypeScriptClientProxyGenerator generator = new DefaultTypeScriptClientProxyGenerator(new DefaultBitCodeGeneratorOrderedProjectsProvider(),
-                    bitConfigProvider, dtosProvider
-                    , new DefaultTypeScriptClientProxyDtoGenerator(), new DefaultTypeScriptClientContextGenerator(), controllersProvider, new DefaultProjectEnumTypesProvider(controllersProvider, dtosProvider));
+                using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
+                using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
+                {
+                    using (Process bitCodeGeneratorImplProcess = new Process())
+                    {
+                        bitCodeGeneratorImplProcess.StartInfo.UseShellExecute = false;
+                        bitCodeGeneratorImplProcess.StartInfo.RedirectStandardOutput = bitCodeGeneratorImplProcess.StartInfo.RedirectStandardError = true;
+                        bitCodeGeneratorImplProcess.StartInfo.FileName = Path.Combine(Path.GetDirectoryName(typeof(BitSourceGenerator).Assembly.Location), "..", @"implementation\BitCodeGeneratorTaskImpl.exe"); // Not supported on Mac/Linux at the moment.
+                        bitCodeGeneratorImplProcess.StartInfo.Arguments = $"-projectPath \"{ProjectPath}\"";
+                        bitCodeGeneratorImplProcess.StartInfo.CreateNoWindow = true;
+                        bitCodeGeneratorImplProcess.StartInfo.WorkingDirectory = Path.GetDirectoryName(bitCodeGeneratorImplProcess.StartInfo.FileName);
+                        bitCodeGeneratorImplProcess.OutputDataReceived += (sender, e) =>
+                        {
+                            if (e.Data != null)
+                                LogMessage(e.Data);
+                            else
+                                outputWaitHandle.Set();
+                        };
+                        bitCodeGeneratorImplProcess.ErrorDataReceived += (sender, e) =>
+                        {
+                            if (e.Data != null)
+                                LogError(e.Data, new Exception(e.Data));
+                            else
+                                errorWaitHandle.Set();
+                        };
+                        bitCodeGeneratorImplProcess.Start();
+                        bitCodeGeneratorImplProcess.BeginOutputReadLine();
+                        bitCodeGeneratorImplProcess.BeginErrorReadLine();
+                        bitCodeGeneratorImplProcess.WaitForExit();
+                        outputWaitHandle.WaitOne();
+                        errorWaitHandle.WaitOne();
+                    }
+                }
 
-                await generator.GenerateCodes(workspace);
-
-                Log($"Code Generation Completed in {sw.ElapsedMilliseconds} ms using {workspace.GetType().Name}.");
+                LogMessage($"Code Generation completed in {sw.ElapsedMilliseconds} ms.");
             }
-            catch (Exception ex)
+            catch (Exception exp)
             {
-                LogException("Code Generation failed.", ex);
-                throw;
+                LogError(exp.Message, exp);
             }
             finally
             {
                 sw?.Stop();
-                workspace.WorkspaceFailed -= MSBuildWorkspace_WorkspaceFailed;
             }
+
+            return true;
         }
 
-        private void MSBuildWorkspace_WorkspaceFailed(object sender, WorkspaceDiagnosticEventArgs e)
-        {
-            if (e.Diagnostic.Kind == WorkspaceDiagnosticKind.Failure)
-                Log(e.Diagnostic.Message);
-        }
-
-        private void Log(string text)
+        void LogMessage(string text)
         {
             text = $">>>>> {text} {DateTimeOffset.Now} {typeof(BitSourceGenerator).Assembly.FullName} <<<<< \n";
 
-            _logger.Warn(text);
-
-            File.WriteAllText(Path.Combine(Path.GetTempPath(), $"Bit-Source-Generator-Log-Log{Guid.NewGuid()}.log"), text);
+            Log.LogMessage(MessageImportance.High, text);
         }
 
-        private void LogException(string text, Exception ex)
+        void LogError(string text, Exception ex)
         {
             text = $">>>>> {text} {DateTimeOffset.Now} {typeof(BitSourceGenerator).Assembly.FullName}<<<<< \n {ex} \n";
 
-            _logger.Error(text, ex);
-
-            File.WriteAllText(Path.Combine(Path.GetTempPath(), $"Bit-Source-Generator-Log-Log{Guid.NewGuid()}.log"), text);
+            Log.LogError(text);
         }
+
+        [Required]
+        public virtual string ProjectPath { get; set; }
     }
 }

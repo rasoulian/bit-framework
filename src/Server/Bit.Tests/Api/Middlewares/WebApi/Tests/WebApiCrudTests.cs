@@ -1,5 +1,5 @@
 ﻿using Bit.Data.Contracts;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Core.Contracts;
 using Bit.Tests.Model.DomainModels;
@@ -36,7 +36,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                     Version = 1
                 };
 
-                TestModel modelAfterInsert = await client.Controller<TestModelsController, TestModel>()
+                TestModel modelAfterInsert = await client.TestModels()
                     .Set(modelBeforeInsert)
                     .CreateEntryAsync();
 
@@ -48,7 +48,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 A.CallTo(() => testModelsController.Create(A<TestModel>.That.Matches(testModel => testModel.StringProperty == "Test"),
                             A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 IRepository<TestModel> testModelsRepository =
                     TestDependencyManager.CurrentTestDependencyManager.Objects
@@ -56,7 +56,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                         .Single();
 
                 A.CallTo(() => testModelsRepository.AddAsync(A<TestModel>.That.Matches(testModel => testModel.StringProperty == "Test"), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -70,12 +70,12 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                long modelBeforeUpdateId = await client.Controller<TestModelsController, TestModel>()
+                long modelBeforeUpdateId = await client.TestModels()
                     .Top(1)
                     .Select(t => t.Id)
                     .FindScalarAsync<long>();
 
-                TestModel modelAfterUpdate = await client.Controller<TestModelsController, TestModel>()
+                TestModel modelAfterUpdate = await client.TestModels()
                     .Key(modelBeforeUpdateId)
                     .Set(new { StringProperty = "Test2" })
                     .UpdateEntryAsync();
@@ -91,7 +91,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                         testModelDelta =>
                             testModelDelta.GetChangedPropertyNames().Single() == nameof(TestModel.StringProperty)),
                     A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 IRepository<TestModel> testModelsRepository =
                     TestDependencyManager.CurrentTestDependencyManager.Objects
@@ -101,7 +101,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                 A.CallTo(() => testModelsRepository.UpdateAsync(
                             A<TestModel>.That.Matches(testModel => testModel.StringProperty == "Test2"),
                             A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -115,12 +115,12 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                long modelIdForDelete = await client.Controller<TestModelsController, TestModel>()
+                long modelIdForDelete = await client.TestModels()
                     .Top(1)
                     .Select(t => t.Id)
                     .FindScalarAsync<long>();
 
-                await client.Controller<TestModelsController, TestModel>()
+                await client.TestModels()
                     .Key(modelIdForDelete)
                     .DeleteEntryAsync();
 
@@ -129,7 +129,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                     .Last();
 
                 A.CallTo(() => testModelsController.Delete(modelIdForDelete, A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 IRepository<TestModel> testModelsRepository =
                     TestDependencyManager.CurrentTestDependencyManager.Objects
@@ -139,7 +139,7 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                 A.CallTo(() => testModelsRepository.DeleteAsync(
                             A<TestModel>.That.Matches(testModel => testModel.Id == modelIdForDelete),
                             A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -158,14 +158,14 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                     requestValidator.ValidateRequestByUri(message.RequestUri);
                 });
 
-                IEnumerable<ParentEntity> parentEntities = await client.Controller<ParentEntitiesController, ParentEntity>()
+                IEnumerable<ParentEntity> parentEntities = await client.ParentEntities()
                     .Where(p => p.Name == "A")
                     .FindEntriesAsync();
 
                 Assert.AreEqual(1, parentEntities.Count());
 
-                A.CallTo(() => requestValidator.ValidateRequestByUri(A<Uri>.That.Matches(uri => uri.ToString().Contains("$filter=Name eq 'A'"))))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                A.CallTo(() => requestValidator.ValidateRequestByUri(A<Uri>.That.Matches(uri => uri.ToString().AsUnescaped().Contains("$filter=Name eq 'A'"))))
+                    .MustHaveHappenedOnceExactly();
             }
         }
 

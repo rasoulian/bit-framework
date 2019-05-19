@@ -56,14 +56,11 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                await client.Controller<TestModelsController, TestModel>()
-                    .Action(nameof(TestModelsController.StringFormattersTests))
-                    .Set(new TestModelsController.StringFormattersTestsParameters
-                    {
-                        simpleString = "simpleString",
-                        stringsArray = new[] { "stringsArray1", "stringsArray2" },
-                        stringsArray2 = new[] { "stringsArray1", "stringsArray2" },
-                        entitiesArray = new[]
+                await client.TestModels()
+                    .StringFormattersTests(simpleString: "simpleString",
+                        stringsArray: new[] { "stringsArray1", "stringsArray2" },
+                        stringsArray2: new[] { "stringsArray1", "stringsArray2" },
+                        entitiesArray: new[]
                         {
                             new TestModel
                             {
@@ -74,26 +71,26 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
                                 StringProperty = "StringProperty2", Id = 3, Version = 3
                             }
                         },
-                        simpleDto = new TestModel { StringProperty = "StringProperty", Id = 1, Version = 1 }
-                    }).ExecuteAsync();
+                        simpleDto: new TestModel { StringProperty = "StringProperty", Id = 1, Version = 1 })
+                    .ExecuteAsync();
 
                 A.CallTo(() => valueChecker.CheckValue("ONETWOsimpleString"))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => valueChecker.CheckValue(A<List<string>>.That.Matches(strs => strs.SequenceEqual(new List<string> { "ONETWOstringsArray1", "ONETWOstringsArray2" }))))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => valueChecker.CheckValue(A<TestModel>.That.Matches(tm => tm.StringProperty == "ONETWOStringProperty")))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => valueChecker.CheckValue(A<List<TestModel>>.That.Matches(tms => tms.First().StringProperty == "ONETWOStringProperty1" && tms.Last().StringProperty == "ONETWOStringProperty2")))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => stringCorrector1.CorrectString(A<string>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Times(8));
+                    .MustHaveHappenedANumberOfTimesMatching(times => times == 8);
 
                 A.CallTo(() => stringCorrector2.CorrectString(A<string>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Times(8));
+                    .MustHaveHappenedANumberOfTimesMatching(times => times == 8);
             }
         }
 
@@ -123,10 +120,10 @@ namespace Bit.Tests.Api.Middlewares.WebApi.Tests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                IEnumerable<TestModel> testModels = await client.Controller<TestModelsController, TestModel>()
-                     .Function(nameof(TestModelsController.GetSomeTestModelsForTest))
+                IEnumerable<TestModel> testModels = await client.TestModels()
+                     .GetSomeTestModelsForTest()
                      .Where(tm => tm.StringProperty == "VALUE")
-                     .FindEntriesAsync();
+                     .ExecuteAsEnumerableAsync();
 
                 Assert.AreEqual(1, testModels.Count());
             }

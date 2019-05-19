@@ -1,10 +1,9 @@
-﻿using Autofac;
-using Bit.ViewModel.Contracts;
+﻿using Bit.ViewModel.Contracts;
 using Simple.OData.Client;
 using System;
 using System.Net.Http;
 
-namespace Prism.Ioc
+namespace Autofac
 {
     public static class ContainerBuilderExtensions
     {
@@ -17,14 +16,12 @@ namespace Prism.Ioc
 
             containerBuilder.Register(c =>
             {
-                HttpMessageHandler authenticatedHttpMessageHandler = c.ResolveNamed<HttpMessageHandler>(ContractKeys.AuthenticatedHttpMessageHandler);
-
                 IClientAppProfile clientAppProfile = c.Resolve<IClientAppProfile>();
 
-                IODataClient odataClient = new ODataClient(new ODataClientSettings(new Uri(clientAppProfile.HostUri, clientAppProfile.ODataRoute))
+                IODataClient odataClient = new ODataClient(new ODataClientSettings(httpClient: c.Resolve<HttpClient>(), new Uri(clientAppProfile.ODataRoute, uriKind: UriKind.Relative))
                 {
                     RenewHttpConnection = false,
-                    OnCreateMessageHandler = () => authenticatedHttpMessageHandler
+                    NameMatchResolver = ODataNameMatchResolver.AlpahumericCaseInsensitive
                 });
 
                 return odataClient;

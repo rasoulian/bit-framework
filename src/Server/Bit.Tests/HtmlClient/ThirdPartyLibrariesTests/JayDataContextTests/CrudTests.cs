@@ -1,5 +1,5 @@
 ﻿using Bit.Test;
-using Bit.Test.Core.Implementations;
+using Bit.Test.Implementations;
 using Bit.Test.Server;
 using Bit.Tests.Api.ApiControllers;
 using Bit.Tests.Model.DomainModels;
@@ -11,6 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Remote;
 using Simple.OData.Client;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,7 +39,7 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .Single();
 
                 A.CallTo(() => testModelsController.Create(A<TestModel>.That.Matches(m => m.StringProperty == "Test"), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -68,13 +69,13 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .ElementAt(3);
 
                 A.CallTo(() => controllerForInsert.Create(A<TestComplexDto>.That.Matches(dto => dto.ComplexObj.Name == "Test?"), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => controllerForUpdate.PartialUpdate(1, A<Delta<TestComplexDto>>.That.Matches(dto => dto.GetInstance().ComplexObj.Name == "Test?"), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
-                A.CallTo(() => controllerForAction.DoSomeThingWithComplexObj(A<TestComplexController.DoSomeThingWithComplexObjParameters>.That.Matches(parameters => parameters.complexDto.ComplexObj.Name == "Test??")))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                A.CallTo(() => controllerForAction.DoSomeThingWithComplexObj(A<TestComplexDto>.That.Matches(complexDto => complexDto.ComplexObj.Name == "Test??")))
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -95,8 +96,8 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .OfType<TestComplexController>()
                     .Single();
 
-                A.CallTo(() => controllerForSimpleValuesArray.GetValues(A<TestComplexController.GetValuesParameters>.That.Matches(parameters => parameters.values != null), A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                A.CallTo(() => controllerForSimpleValuesArray.GetValues(A<IEnumerable<int>>.That.Matches(values => values != null), A<CancellationToken>.Ignored))
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -122,10 +123,10 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .ElementAt(1);
 
                 A.CallTo(() => firstCallController.GetDtoWithEnumsByGender(TestGender.Man))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => secondCallController.GetDtoWithEnumsByGender2(TestGender2.Man))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -139,35 +140,30 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
 
                 IODataClient client = testEnvironment.Server.BuildODataClient(token: token);
 
-                DtoWithEnum dtoWithEnum = await client.Controller<DtoWithEnumController, DtoWithEnum>()
-                    .Function(nameof(DtoWithEnumController.GetDtoWithEnumsByGender))
-                    .Set(new { gender = TestGender.Man })
+                DtoWithEnum dtoWithEnum = await client.DtoWithEnum()
+                    .GetDtoWithEnumsByGender(TestGender.Man)
                     .ExecuteAsSingleAsync();
 
                 Assert.AreEqual(TestGender.Man, dtoWithEnum.Gender);
 
-                Assert.AreEqual(true, await client.Controller<DtoWithEnumController, DtoWithEnum>()
-                    .Action(nameof(DtoWithEnumController.PostDtoWithEnum))
-                    .Set(new DtoWithEnumController.PostDtoWithEnumParameters { dto = dtoWithEnum })
+                Assert.AreEqual(true, await client.DtoWithEnum()
+                    .PostDtoWithEnum(dtoWithEnum)
                     .ExecuteAsScalarAsync<bool>());
 
                 ODataBatch batchClient = testEnvironment.Server.BuildODataBatchClient(token: token);
 
-                batchClient += bc => bc.Controller<DtoWithEnumController, DtoWithEnum>()
-                    .Function(nameof(DtoWithEnumController.GetDtoWithEnumsByGender2))
-                    .Set(new { gender = TestGender2.Man })
-                    .FindEntriesAsync();
+                batchClient += bc => bc.DtoWithEnum()
+                    .GetDtoWithEnumsByGender2(TestGender2.Man)
+                    .ExecuteAsEnumerableAsync();
 
-                batchClient += bc => bc.Controller<DtoWithEnumController, DtoWithEnum>()
-                    .Function(nameof(DtoWithEnumController.GetDtoWithEnumsByGender))
-                    .Set(new { gender = TestGender.Man })
-                    .FindEntriesAsync();
+                batchClient += bc => bc.DtoWithEnum()
+                    .GetDtoWithEnumsByGender(TestGender.Man)
+                    .ExecuteAsEnumerableAsync();
 
                 await batchClient.ExecuteAsync();
 
-                /*Assert.AreEqual(true, await client.Controller<DtoWithEnumController, DtoWithEnum>()
-                    .Action(nameof(DtoWithEnumController.TestEnumsArray))
-                    .Set(new DtoWithEnumController.TestEnumsArrayParameters { enums = new[] { TestGender2.Man, TestGender2.Woman } })
+                /*Assert.AreEqual(true, await client.DtoWithEnum()
+                    .TestEnumsArray(new[] { TestGender2.Man, TestGender2.Woman })
                     .ExecuteAsScalarAsync<bool>());*/
 
                 DtoWithEnumController firstCallController = TestDependencyManager.CurrentTestDependencyManager.Objects
@@ -179,10 +175,10 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .ElementAt(2);
 
                 A.CallTo(() => firstCallController.GetDtoWithEnumsByGender(TestGender.Man))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 A.CallTo(() => secondCallController.GetDtoWithEnumsByGender2(TestGender2.Man))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -219,7 +215,7 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .Single();
 
                 A.CallTo(() => parentEntitiesController.Get(A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
 
@@ -241,14 +237,14 @@ namespace Bit.Tests.HtmlClient.ThirdPartyLibrariesTests.JayDataContextTests
                     .Single();
 
                 A.CallTo(() => parentEntitiesController.Get(A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
 
                 TestModelsController testModelsController = TestDependencyManager.CurrentTestDependencyManager.Objects
                     .OfType<TestModelsController>()
                     .Single();
 
                 A.CallTo(() => testModelsController.Get(A<CancellationToken>.Ignored))
-                    .MustHaveHappened(Repeated.Exactly.Once);
+                    .MustHaveHappenedOnceExactly();
             }
         }
     }

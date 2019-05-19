@@ -1,4 +1,5 @@
 ﻿#if UWP
+using Bit.View;
 using Bit.ViewModel;
 using System.Linq;
 using System.Reflection;
@@ -23,7 +24,7 @@ namespace Bit.UWP
         }
 
         /// <summary>
-        /// Configures VersionTracking | RgPluginsPopup | BitCSharpClientControls (DatePicker, Checkbox, RadioButton, Frame) | Set Min Width & Height
+        /// Configures VersionTracking | RgPluginsPopup | BitCSharpClientControls (DatePicker, Checkbox, RadioButton, Frame) | Set Min Width and Height
         /// </summary>
         protected virtual void UseDefaultConfiguration()
         {
